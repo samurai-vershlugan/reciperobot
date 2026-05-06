@@ -4822,16 +4822,16 @@ Respond ONLY with a JSON array, no markdown, no preamble:
 Make sure URLs are real, working URLs from those sources. Tags must be from: quick, gluten-free, kid-friendly, meal-prep, vegetarian, dairy-free, spicy, date-night.`;
 
   try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/discover-recipes`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        messages: [{ role: 'user', content: prompt }]
-      })
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${AUTH_TOKEN}`
+      },
+      body: JSON.stringify({ prompt })
     });
 
+    if (!response.ok) throw new Error(`Edge function error: ${response.status}`);
     const data = await response.json();
     const text = data.content?.[0]?.text || '';
     const clean = text.replace(/```json|```/g, '').trim();
