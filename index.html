@@ -4811,7 +4811,6 @@ Respond ONLY with a JSON array, no markdown, no preamble:
   {
     "name": "Recipe Name",
     "source": "Source Name",
-    "url": "https://...",
     "description": "2 sentence description of why this family would love it",
     "tags": ["quick", "kid-friendly"],
     "category": "chicken|taco|pasta|fish|burger|steak|mediterranean|other",
@@ -4819,7 +4818,7 @@ Respond ONLY with a JSON array, no markdown, no preamble:
   }
 ]
 
-Make sure URLs are real, working URLs from those sources. Tags must be from: quick, gluten-free, kid-friendly, meal-prep, vegetarian, dairy-free, spicy, date-night.`;
+Tags must be from: quick, gluten-free, kid-friendly, meal-prep, vegetarian, dairy-free, spicy, date-night.`;
 
   try {
     const response = await fetch(`${SUPABASE_URL}/functions/v1/discover-recipes`, {
@@ -4831,17 +4830,23 @@ Make sure URLs are real, working URLs from those sources. Tags must be from: qui
       body: JSON.stringify({ prompt })
     });
 
-    if (!response.ok) throw new Error(`Edge function error: ${response.status}`);
-    const data = await response.json();
+    const rawText = await response.text();
+    console.log('Discover response status:', response.status);
+    console.log('Discover response body:', rawText);
+
+    if (!response.ok) throw new Error(`Edge function error ${response.status}: ${rawText}`);
+    const data = JSON.parse(rawText);
     const text = data.content?.[0]?.text || '';
+    console.log('Claude text:', text);
     const clean = text.replace(/```json|```/g, '').trim();
     const recipes = JSON.parse(clean);
     renderDiscoverResults(recipes);
   } catch(e) {
     console.error('Discover error:', e);
     resultsEl.innerHTML = `
-      <div style="color:#cc4444;font-family:'DM Mono',monospace;font-size:12px;padding:16px 0">
-        Couldn't fetch recommendations right now. Try again in a moment.
+      <div style="color:#cc4444;font-family:'DM Mono',monospace;font-size:11px;padding:16px 0;line-height:1.8">
+        Error: ${e.message}<br>
+        <span style="opacity:0.6">Check the browser console for details.</span>
       </div>
     `;
   } finally {
@@ -4872,7 +4877,7 @@ function renderDiscoverResults(recipes) {
         }).join('')}
       </div>
       <div class="discover-result-actions">
-        <a href="${r.url}" target="_blank" class="discover-action-btn">View Recipe ↗</a>
+        <a href="https://www.google.com/search?q=${encodeURIComponent(r.name + ' ' + r.source)}" target="_blank" class="discover-action-btn">Find Recipe ↗</a>
         <button class="discover-action-btn primary" onclick="addDiscoveredRecipe(${JSON.stringify(r).replace(/"/g, '&quot;')})">＋ Add to Library</button>
       </div>
     `;
