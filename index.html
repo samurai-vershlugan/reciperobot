@@ -1752,6 +1752,98 @@
   .discover-loading-dots span:nth-child(2) { animation-delay: 0.2s; }
   .discover-loading-dots span:nth-child(3) { animation-delay: 0.4s; }
 
+  .robot-btn {
+    background: linear-gradient(135deg, #2a6e4a, #3a9e6a);
+    color: #fff;
+    border: 1px solid transparent;
+  }
+  .robot-btn:hover { background: linear-gradient(135deg, #3a8a5a, #4ab87a); }
+
+  .robot-modal .modal-cats { flex-wrap: wrap; }
+
+  .robot-ing-btn {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.5px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text-muted);
+    transition: all 0.15s;
+  }
+  .robot-ing-btn.selected {
+    background: #2a6e4a;
+    border-color: #3a9e6a;
+    color: #fff;
+  }
+  .robot-selected-tag {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    padding: 3px 8px 3px 10px;
+    border-radius: 20px;
+    background: #1a3a2a;
+    border: 1px solid #2a6e4a;
+    color: #4ab87a;
+  }
+  .robot-selected-tag button {
+    background: none;
+    border: none;
+    color: #4ab87a;
+    cursor: pointer;
+    font-size: 11px;
+    padding: 0;
+    line-height: 1;
+    opacity: 0.7;
+  }
+  .robot-selected-tag button:hover { opacity: 1; }
+
+  .robot-section-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: 4px;
+    margin-bottom: 8px;
+    display: inline-block;
+  }
+  .robot-section-now { background: #1a3a2a; color: #4ab87a; }
+  .robot-section-close { background: #2a2a1a; color: #c8a840; }
+  .robot-section-new { background: #1a1a3a; color: #8888cc; }
+
+  .robot-result {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+    margin-bottom: 8px;
+    transition: border-color 0.15s;
+  }
+  .robot-result:hover { border-color: var(--accent); }
+  .robot-result-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+  .robot-result-missing {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+  .robot-result-actions {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
   /* Signout btn */
   .signout-btn {
     font-family: 'DM Mono', monospace;
@@ -1839,6 +1931,7 @@
       <button class="nav-action share-btn" onclick="sharePlan()">Share</button>
       <button class="nav-action history-btn" onclick="showHistoryPage()">Saved Weeks</button>
       <button class="nav-action discover-btn" onclick="openDiscoverModal()">✦ Discover</button>
+      <button class="nav-action robot-btn" onclick="openRobotModal()">🤖 Robot</button>
     </div>
   </div>
   </div>
@@ -2066,6 +2159,46 @@
     </button>
 
     <div id="discoverResults"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="robotModal" onclick="if(event.target.id==='robotModal') closeRobotModal()">
+  <div class="modal robot-modal" style="position:relative;max-width:600px;width:95%">
+    <button class="modal-close" onclick="closeRobotModal()">×</button>
+    <h3>🤖 Recipe Robot</h3>
+    <p style="color:var(--text-muted);font-size:13px;margin-bottom:16px;line-height:1.6">
+      Tell me what's in your fridge and I'll find what you can make — right now or with 1–2 extra items.
+    </p>
+
+    <!-- Pantry pre-load banner -->
+    <div id="robotPantryBanner" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-family:'DM Mono',monospace;font-size:11px;color:var(--text-muted)">
+      ✓ Pre-loaded <span id="robotPantryCount">0</span> items from your pantry
+    </div>
+
+    <!-- Ingredient grid -->
+    <div class="swap-tag-label" style="margin-bottom:8px">Tap what you have</div>
+    <div id="robotIngredientGrid" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:14px"></div>
+
+    <!-- Free text add -->
+    <div style="display:flex;gap:8px;margin-bottom:16px">
+      <input id="robotFreeText" class="login-input" type="text" placeholder="Add anything else... (e.g. leftover rice, jalapeños)"
+        style="margin-bottom:0;flex:1;font-size:13px;padding:8px 12px"
+        onkeydown="if(event.key==='Enter') robotAddFreeText()" />
+      <button class="confirm-btn" id="robotMicBtn" onclick="robotStartVoice()" title="Speak your ingredients" style="flex:0 0 auto;padding:8px 14px;font-size:16px">🎤</button>
+      <button class="confirm-btn" onclick="robotAddFreeText()" style="flex:0 0 auto;padding:8px 14px">Add</button>
+    </div>
+
+    <!-- Selected ingredients display -->
+    <div id="robotSelectedWrap" style="display:none;margin-bottom:14px">
+      <div class="swap-tag-label" style="margin-bottom:6px">What you have (<span id="robotSelectedCount">0</span> items)</div>
+      <div id="robotSelectedTags" style="display:flex;flex-wrap:wrap;gap:5px"></div>
+    </div>
+
+    <button class="login-btn" id="robotRunBtn" onclick="runRobot()" style="margin-bottom:16px">
+      🤖 Find What I Can Make
+    </button>
+
+    <div id="robotResults"></div>
   </div>
 </div>
 
@@ -4715,7 +4848,349 @@ function sharePlan() {
   }
 }
 
-// ─── DISCOVER ENGINE ──────────────────────────────────────────────────────────
+// ─── RECIPE ROBOT ─────────────────────────────────────────────────────────────
+
+const ROBOT_GRID_ITEMS = [
+  // Proteins
+  'chicken thighs','ground beef','ground turkey','salmon','shrimp','eggs','pork','lamb',
+  // Produce
+  'garlic','onion','lemon','lime','avocado','tomatoes','bell peppers','broccoli',
+  'spinach','zucchini','carrots','cucumber','jalapeño','fresh cilantro','green onions',
+  // Dairy
+  'butter','heavy cream','Greek yogurt','sour cream','parmesan','mozzarella','cheddar',
+  // Pantry
+  'olive oil','soy sauce','pasta','white rice','black beans','chicken broth',
+  'marinara sauce','pesto','tahini','salsa','flour tortillas','panko breadcrumbs',
+  'honey','sesame oil','rice vinegar','peanut butter','canned tomatoes',
+  // Spices
+  'paprika','cumin','dried oregano','chili powder','red chili flakes','ginger'
+];
+
+let robotSelected = new Set();
+
+function openRobotModal() {
+  robotSelected = new Set();
+  document.getElementById('robotResults').innerHTML = '';
+  document.getElementById('robotFreeText').value = '';
+
+  // Pre-load pantry items
+  const pantryItems = Object.keys(haveIngredients).filter(k => haveIngredients[k]);
+  pantryItems.forEach(item => robotSelected.add(item.toLowerCase()));
+
+  const banner = document.getElementById('robotPantryBanner');
+  if (pantryItems.length) {
+    banner.style.display = 'block';
+    document.getElementById('robotPantryCount').textContent = pantryItems.length;
+  } else {
+    banner.style.display = 'none';
+  }
+
+  renderRobotGrid();
+  renderRobotSelected();
+  document.getElementById('robotModal').classList.add('open');
+}
+
+function closeRobotModal() {
+  document.getElementById('robotModal').classList.remove('open');
+}
+
+function renderRobotGrid() {
+  const el = document.getElementById('robotIngredientGrid');
+  el.innerHTML = '';
+  ROBOT_GRID_ITEMS.forEach(item => {
+    const btn = document.createElement('button');
+    btn.className = `robot-ing-btn${robotSelected.has(item) ? ' selected' : ''}`;
+    btn.textContent = item;
+    btn.addEventListener('click', () => {
+      if (robotSelected.has(item)) robotSelected.delete(item);
+      else robotSelected.add(item);
+      btn.classList.toggle('selected', robotSelected.has(item));
+      renderRobotSelected();
+    });
+    el.appendChild(btn);
+  });
+}
+
+let robotRecognition = null;
+
+function robotStartVoice() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    showToast('Voice not supported on this browser');
+    return;
+  }
+
+  const micBtn = document.getElementById('robotMicBtn');
+  const input = document.getElementById('robotFreeText');
+
+  // If already listening, stop
+  if (robotRecognition) {
+    robotRecognition.stop();
+    return;
+  }
+
+  robotRecognition = new SpeechRecognition();
+  robotRecognition.continuous = false;
+  robotRecognition.interimResults = true;
+  robotRecognition.lang = 'en-US';
+
+  micBtn.textContent = '⏹';
+  micBtn.style.background = '#cc3333';
+  input.placeholder = 'Listening... say your ingredients';
+
+  robotRecognition.onresult = (e) => {
+    const transcript = Array.from(e.results)
+      .map(r => r[0].transcript)
+      .join('');
+    input.value = transcript;
+  };
+
+  robotRecognition.onend = () => {
+    micBtn.textContent = '🎤';
+    micBtn.style.background = '';
+    input.placeholder = 'Add anything else... (e.g. leftover rice, jalapeños)';
+    robotRecognition = null;
+    // Auto-add if something was captured
+    if (input.value.trim()) robotAddFreeText();
+  };
+
+  robotRecognition.onerror = (e) => {
+    micBtn.textContent = '🎤';
+    micBtn.style.background = '';
+    input.placeholder = 'Add anything else...';
+    robotRecognition = null;
+    if (e.error !== 'no-speech') showToast('Mic error: ' + e.error);
+  };
+
+  robotRecognition.start();
+}
+
+function robotAddFreeText() {
+  const input = document.getElementById('robotFreeText');
+  const val = input.value.trim().toLowerCase();
+  if (!val) return;
+  val.split(',').map(s => s.trim()).filter(Boolean).forEach(item => {
+    robotSelected.add(item);
+  });
+  input.value = '';
+  renderRobotGrid();
+  renderRobotSelected();
+}
+
+function renderRobotSelected() {
+  const wrap = document.getElementById('robotSelectedWrap');
+  const tagsEl = document.getElementById('robotSelectedTags');
+  const countEl = document.getElementById('robotSelectedCount');
+  const items = [...robotSelected];
+  wrap.style.display = items.length ? 'block' : 'none';
+  countEl.textContent = items.length;
+  tagsEl.innerHTML = '';
+  items.sort().forEach(item => {
+    const tag = document.createElement('div');
+    tag.className = 'robot-selected-tag';
+    tag.innerHTML = `${item} <button onclick="robotRemoveItem('${item}')">✕</button>`;
+    tagsEl.appendChild(tag);
+  });
+}
+
+function robotRemoveItem(item) {
+  robotSelected.delete(item);
+  renderRobotGrid();
+  renderRobotSelected();
+}
+
+// Analyze library locally first
+function analyzeLibraryLocally() {
+  const have = [...robotSelected].map(s => s.toLowerCase());
+  const library = getAllRecipes().filter(r => !(r.tags||[]).includes('prep') && !r.friday);
+  const results = { now: [], close: [] };
+
+  library.forEach(recipe => {
+    const allIngs = [...(recipe.ingredients||[])];
+    if (recipe.proteins?.length) {
+      recipe.proteins.forEach(p => { if (p.item) allIngs.push({item: p.item}); });
+    }
+    const needed = allIngs.map(i => (i.item||'').toLowerCase());
+    const missing = needed.filter(ing => {
+      return !have.some(h => ing.includes(h) || h.includes(ing));
+    });
+
+    if (missing.length === 0) {
+      results.now.push({ recipe, missing: [] });
+    } else if (missing.length <= 2) {
+      results.close.push({ recipe, missing });
+    }
+  });
+
+  return results;
+}
+
+async function runRobot() {
+  if (robotSelected.size === 0) { showToast('Add some ingredients first!'); return; }
+
+  const btn = document.getElementById('robotRunBtn');
+  const resultsEl = document.getElementById('robotResults');
+  btn.disabled = true;
+  resultsEl.innerHTML = `
+    <div class="discover-loading">
+      <div class="discover-loading-dots"><span>🤖</span></div>
+      <div style="margin-top:12px">Scanning your kitchen...</div>
+    </div>`;
+
+  // First — analyze library locally
+  const local = analyzeLibraryLocally();
+
+  // Build prompt for Claude to suggest new recipes + validate
+  const haveList = [...robotSelected].join(', ');
+  const libraryNames = getAllRecipes().filter(r => !(r.tags||[]).includes('prep')).map(r => r.name).join(', ');
+
+  const prompt = `You are a recipe matching engine for a family meal app.
+
+The family has these ingredients available:
+${haveList}
+
+Their existing recipe library (don't suggest these):
+${libraryNames}
+
+Family profile: Family with kids, shops at Costco and Trader Joes, enjoys Mediterranean, Mexican, American comfort food.
+
+Suggest exactly 3 NEW recipes (not in their library) that they can make with mostly what they have — requiring at most 2 additional common ingredients.
+
+Respond ONLY with JSON, no markdown:
+[
+  {
+    "name": "Recipe Name",
+    "source": "Source Name (NYT Cooking, Serious Eats, Smitten Kitchen, Half Baked Harvest, The Kitchn, Budget Bytes, Bon Appétit, Food52)",
+    "description": "One sentence why this works with what they have",
+    "missing": ["ingredient 1", "ingredient 2"],
+    "tags": ["quick"],
+    "category": "chicken|taco|pasta|fish|burger|steak|mediterranean|other"
+  }
+]
+
+Only suggest recipes where missing ingredients are common, cheap, and easy to find. Tags from: quick, gluten-free, kid-friendly, meal-prep, vegetarian, dairy-free, spicy, date-night.`;
+
+  let newRecipes = [];
+  try {
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/discover-recipes`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${AUTH_TOKEN}` },
+      body: JSON.stringify({ prompt })
+    });
+    const rawText = await response.text();
+    const data = JSON.parse(rawText);
+    const text = data.content?.[0]?.text || '';
+    const clean = text.replace(/```json|```/g, '').trim();
+    newRecipes = JSON.parse(clean);
+  } catch(e) { console.warn('Robot new recipe fetch failed:', e); }
+
+  btn.disabled = false;
+  renderRobotResults(local, newRecipes);
+}
+
+function renderRobotResults(local, newRecipes) {
+  const el = document.getElementById('robotResults');
+  el.innerHTML = '';
+
+  const hasAny = local.now.length || local.close.length || newRecipes.length;
+  if (!hasAny) {
+    el.innerHTML = `<div style="color:var(--text-muted);font-size:13px;padding:16px 0">No matches found. Try adding more ingredients.</div>`;
+    return;
+  }
+
+  // Make it now
+  if (local.now.length) {
+    el.innerHTML += `<div class="robot-section-label robot-section-now">✓ Make it right now (${local.now.length})</div>`;
+    local.now.sort((a,b) => a.recipe.name.localeCompare(b.recipe.name)).forEach(({recipe}) => {
+      el.appendChild(buildRobotCard(recipe, [], false));
+    });
+  }
+
+  // Almost there
+  if (local.close.length) {
+    el.innerHTML += `<div class="robot-section-label robot-section-close" style="margin-top:12px">Almost there — 1–2 items needed (${local.close.length})</div>`;
+    local.close.sort((a,b) => a.missing.length - b.missing.length || a.recipe.name.localeCompare(b.recipe.name))
+      .forEach(({recipe, missing}) => {
+        el.appendChild(buildRobotCard(recipe, missing, false));
+      });
+  }
+
+  // New suggestions
+  if (newRecipes.length) {
+    el.innerHTML += `<div class="robot-section-label robot-section-new" style="margin-top:12px">✦ New recipes you could make (${newRecipes.length})</div>`;
+    newRecipes.forEach(r => {
+      el.appendChild(buildRobotNewCard(r));
+    });
+  }
+}
+
+function buildRobotCard(recipe, missing, isNew) {
+  const div = document.createElement('div');
+  div.className = 'robot-result';
+  const missingHtml = missing.length
+    ? `<div class="robot-result-missing">Need: ${missing.join(', ')}</div>`
+    : `<div class="robot-result-missing" style="color:#4ab87a">All ingredients on hand ✓</div>`;
+
+  div.innerHTML = `
+    <div class="robot-result-title">${recipe.name}</div>
+    ${missingHtml}
+    <div class="robot-result-actions">
+      ${missing.length ? `<button class="discover-action-btn" onclick="robotAddToGrocery(${JSON.stringify(missing).replace(/"/g,'&quot;')})">＋ Add missing to list</button>` : ''}
+      <button class="discover-action-btn primary" onclick="openRobotDayPicker('${recipe.name.replace(/'/g,"\\'")}')">Assign to day →</button>
+    </div>
+  `;
+  return div;
+}
+
+function buildRobotNewCard(r) {
+  const div = document.createElement('div');
+  div.className = 'robot-result';
+  const missingHtml = r.missing?.length
+    ? `<div class="robot-result-missing">Need: ${r.missing.join(', ')}</div>`
+    : '';
+  div.innerHTML = `
+    <div class="robot-result-title">${r.name}</div>
+    <div style="font-family:'DM Mono',monospace;font-size:9px;color:#8888cc;letter-spacing:1px;margin-bottom:4px;text-transform:uppercase">${r.source}</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;line-height:1.5">${r.description||''}</div>
+    ${missingHtml}
+    <div class="robot-result-actions">
+      <a href="https://www.google.com/search?q=${encodeURIComponent(r.name+' '+r.source)}" target="_blank" class="discover-action-btn">Find Recipe ↗</a>
+      <button class="discover-action-btn primary" onclick="addDiscoveredRecipe(${JSON.stringify(r).replace(/"/g,'&quot;')})">＋ Add to Library</button>
+    </div>
+  `;
+  return div;
+}
+
+function robotAddToGrocery(items) {
+  const key = getWeekKey(currentWeekOffset);
+  items.forEach(item => {
+    const ik = `${key}-${item}`;
+    if (!checkedIngredients[ik]) {
+      // Add as unchecked so it appears in grocery list
+    }
+  });
+  showToast(`Added ${items.length} item${items.length>1?'s':''} to grocery list`);
+  renderGroceryList();
+  renderAlexaCommands();
+}
+
+let robotAssignRecipeName = null;
+
+function openRobotDayPicker(recipeName) {
+  robotAssignRecipeName = recipeName;
+  const day = prompt(`Assign "${recipeName}" to which day?\n0=Mon  1=Tue  2=Wed  3=Thu  4=Fri`, '0');
+  if (day === null) return;
+  const idx = parseInt(day);
+  if (isNaN(idx) || idx < 0 || idx > 4) { showToast('Invalid day'); return; }
+  const key = getWeekKey(currentWeekOffset);
+  const recipe = getAllRecipes().find(r => r.name === recipeName);
+  if (!recipe) { showToast('Recipe not found'); return; }
+  weekPlans[key][idx] = { ...recipe };
+  persistWeekPlans();
+  renderWeek();
+  closeRobotModal();
+  showToast(`${recipeName} → ${DAYS[idx]}!`);
+}
 
 let discoverMood = 'surprise';
 
