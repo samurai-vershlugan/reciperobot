@@ -2440,6 +2440,31 @@ const RECIPES = {
       ingredients: [{item:"bone-in chicken thighs",store:"costco"},{item:"chicken broth",store:"costco"},{item:"lemon",store:"tj"},{item:"garlic",store:"tj"},{item:"fresh rosemary",store:"tj"},{item:"fresh thyme",store:"tj"},{item:"olive oil",store:"costco"},{item:"carrots",store:"costco"},{item:"red onion",store:"tj"},{item:"sweet potatoes",store:"tj"}] },
   ],
   mediterranean: [
+    { name: "Chicken Souvlaki Bowls", tags:["mediterranean","quick","gluten-free","kid-friendly"], shop:"costco",
+      url: "https://www.halfbakedharvest.com/chicken-souvlaki-bowls/",
+      steps: [
+        "Combine olive oil, lemon juice, garlic, dried oregano, paprika, salt and pepper in a bowl. Add chicken and toss to coat. Marinate 15–30 minutes.",
+        "Cook chicken on a grill or grill pan over high heat, 4–5 minutes per side until charred and cooked through. Rest 5 minutes then slice.",
+        "Make garlic fries: toss frozen fries with olive oil, garlic, and parsley. Bake at 425°F until crispy.",
+        "Assemble bowls: rice or fries as base, top with chicken, cucumber, tomatoes, red onion, olives, and feta. Drizzle with tzatziki and a squeeze of lemon."
+      ],
+      ingredients: [
+        {item:"boneless skinless chicken breasts (1.5 lbs)", store:"costco"},
+        {item:"olive oil",                                   store:"costco"},
+        {item:"lemon",                                       store:"tj"},
+        {item:"garlic",                                      store:"tj"},
+        {item:"dried oregano",                               store:"tj"},
+        {item:"paprika",                                     store:"costco"},
+        {item:"cucumber",                                    store:"tj"},
+        {item:"cherry tomatoes",                             store:"costco"},
+        {item:"red onion",                                   store:"tj"},
+        {item:"kalamata olives",                             store:"tj"},
+        {item:"feta cheese",                                 store:"tj"},
+        {item:"tzatziki",                                    store:"tj"},
+        {item:"frozen fries",                                store:"costco"},
+        {item:"fresh parsley",                               store:"tj"},
+        {item:"white jasmine rice",                          store:"tj"}
+      ] },
     { name: "Chicken Shawarma", tags:["mediterranean","quick","dairy-free","gluten-free"], shop:"costco", url:"https://www.recipetineats.com/chicken-shawarma-middle-eastern/",
       ingredients: [{item:"chicken thighs",store:"costco"},{item:"pita bread",store:"tj"},{item:"cucumber",store:"tj"},{item:"tomatoes",store:"costco"},{item:"red onion",store:"tj"},{item:"hummus",store:"costco"},{item:"olives",store:"tj"},{item:"fresh parsley",store:"tj"},{item:"lemon",store:"tj"},{item:"garlic",store:"tj"}] },
     { name: "Mediterranean Pitas", tags:["mediterranean","quick","meal-prep"], shop:"costco",
@@ -5361,29 +5386,110 @@ function renderDiscoverResults(recipes) {
 }
 
 function addDiscoveredRecipe(r) {
-  // Build a recipe object compatible with the app
+  // Open an edit modal so user can verify/adjust before saving
+  openDiscoverEditModal(r);
+}
+
+let pendingDiscoverRecipe = null;
+
+function openDiscoverEditModal(r) {
+  pendingDiscoverRecipe = r;
+
+  // Build a simple edit modal dynamically
+  let modal = document.getElementById('discoverEditModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'discoverEditModal';
+    modal.className = 'modal-overlay';
+    modal.style.zIndex = '10000';
+    modal.innerHTML = `
+      <div class="modal" style="position:relative;max-width:500px;width:95%;max-height:85vh;overflow-y:auto">
+        <button class="modal-close" onclick="closeDiscoverEditModal()">×</button>
+        <h3>Review Before Adding</h3>
+        <p style="color:var(--text-muted);font-size:12px;margin-bottom:12px;line-height:1.5">
+          Verify the ingredients match the actual recipe. Edit anything before saving to your library.
+        </p>
+        <label class="input-label">Recipe Name</label>
+        <input id="deRecipeName" class="text-input" type="text" style="margin-bottom:10px" />
+        <label class="input-label">Category</label>
+        <select id="deCategory" class="text-input" style="margin-bottom:10px;background:var(--surface2);color:var(--text)">
+          <option value="chicken">Chicken</option>
+          <option value="mediterranean">Mediterranean</option>
+          <option value="taco">Mexican</option>
+          <option value="pasta">Pasta</option>
+          <option value="fish">Fish</option>
+          <option value="burger">Burgers</option>
+          <option value="steak">Steak</option>
+          <option value="slowcooker">Slow Cooker</option>
+          <option value="other">Other</option>
+        </select>
+        <label class="input-label">Ingredients <span style="opacity:0.5;font-size:9px">(one per line, format: ingredient, store)</span></label>
+        <textarea id="deIngredients" style="width:100%;box-sizing:border-box;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'DM Mono',monospace;font-size:11px;padding:10px;min-height:160px;resize:vertical;outline:none;margin-bottom:10px"></textarea>
+        <label class="input-label">Steps <span style="opacity:0.5;font-size:9px">(one per line)</span></label>
+        <textarea id="deSteps" style="width:100%;box-sizing:border-box;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:12px;padding:10px;min-height:120px;resize:vertical;outline:none;margin-bottom:10px"></textarea>
+        <label class="input-label">Source URL <span style="opacity:0.5;font-size:9px">(optional)</span></label>
+        <input id="deUrl" class="text-input" type="text" placeholder="https://..." style="margin-bottom:16px" />
+        <div style="display:flex;gap:8px;justify-content:flex-end">
+          <button class="confirm-btn" style="background:#333;color:#ccc" onclick="closeDiscoverEditModal()">Cancel</button>
+          <button class="confirm-btn" onclick="confirmDiscoverEdit()">Save to Library ✓</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+  }
+
+  // Pre-fill with what we have
+  document.getElementById('deRecipeName').value = r.name || '';
+  document.getElementById('deCategory').value = r.category || 'other';
+  document.getElementById('deIngredients').value = (r.ingredients || [])
+    .map(i => typeof i === 'string' ? `${i}, tj` : `${i.item}, ${i.store || 'tj'}`)
+    .join('\n');
+  document.getElementById('deSteps').value = (r.steps || []).join('\n');
+  document.getElementById('deUrl').value = r.url || '';
+
+  modal.classList.add('open');
+}
+
+function closeDiscoverEditModal() {
+  const modal = document.getElementById('discoverEditModal');
+  if (modal) modal.classList.remove('open');
+  pendingDiscoverRecipe = null;
+}
+
+function confirmDiscoverEdit() {
+  const name = document.getElementById('deRecipeName').value.trim();
+  if (!name) { showToast('Please enter a recipe name'); return; }
+
+  const cat = document.getElementById('deCategory').value;
+  const ingredientLines = document.getElementById('deIngredients').value
+    .split('\n').map(l => l.trim()).filter(Boolean);
+  const stepLines = document.getElementById('deSteps').value
+    .split('\n').map(l => l.trim()).filter(Boolean);
+  const url = document.getElementById('deUrl').value.trim();
+
+  const ingredients = ingredientLines.map(line => {
+    const parts = line.split(',').map(p => p.trim());
+    const item = parts[0];
+    const store = parts[1] || 'tj';
+    return { item, store };
+  });
+
   const recipe = {
-    name: r.name,
-    tags: [...(r.tags || []), r.category || 'other', 'custom'],
+    name,
+    tags: [cat, 'custom'],
     shop: null,
-    url: r.url,
-    ingredients: (r.ingredients || []).map(item => ({ item, store: 'tj' })),
+    url: url || null,
+    ingredients,
+    steps: stepLines.length ? stepLines : undefined,
     custom: true
   };
 
-  if (!RECIPES.other) RECIPES.other = [];
-
-  // Add to the right category
-  const cat = r.category || 'other';
-  if (RECIPES[cat]) {
-    if (!RECIPES[cat].some(existing => existing.name === r.name)) {
-      RECIPES[cat].push(recipe);
-    }
-  } else {
-    RECIPES.other.push(recipe);
+  if (!RECIPES[cat]) RECIPES[cat] = [];
+  if (!RECIPES[cat].some(r => r.name === name)) {
+    RECIPES[cat].push(recipe);
   }
 
-  // Save to Supabase as custom recipe
+  // Save to Supabase
   if (FAMILY_ID && AUTH_TOKEN) {
     fetch(`${SUPABASE_URL}/rest/v1/recipes`, {
       method: 'POST',
@@ -5395,23 +5501,20 @@ function addDiscoveredRecipe(r) {
       },
       body: JSON.stringify({
         family_id: FAMILY_ID,
-        name: r.name,
+        name,
         category: cat,
         tags: recipe.tags,
-        ingredients: recipe.ingredients,
-        url: r.url,
+        ingredients,
+        steps: stepLines,
+        url: url || null,
         custom: true
       })
-    }).catch(e => console.warn('Save discovered recipe error:', e));
+    }).catch(e => console.warn('Save recipe error:', e));
   }
 
   renderRotationGrid();
-  showToast(`"${r.name}" added to your library!`);
-
-  // Update button to show it's been added
-  event.target.textContent = '✓ Added';
-  event.target.disabled = true;
-  event.target.style.opacity = '0.5';
+  closeDiscoverEditModal();
+  showToast(`"${name}" saved to your library!`);
 }
 
 (async () => {
