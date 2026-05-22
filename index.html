@@ -2772,6 +2772,9 @@ function renderWeek() {
   const key = getWeekKey(currentWeekOffset);
   if (!weekPlans[key]) {
     weekPlans[key] = generateWeekPlan();
+    // New week — clear any stale locks
+    [0,1,2,3,4].forEach(i => delete lockedDays[getLockKey(key, i)]);
+    persistWeekPlans();
   }
   const plan = weekPlans[key];
 
@@ -3699,6 +3702,11 @@ function renderRotationGrid() {
 
 function changeWeek(delta) {
   currentWeekOffset += delta;
+  const key = getWeekKey(currentWeekOffset);
+  // If navigating to a week with no plan yet, clear any stale locks
+  if (!weekPlans[key]) {
+    [0,1,2,3,4].forEach(i => delete lockedDays[getLockKey(key, i)]);
+  }
   renderWeek();
 }
 
