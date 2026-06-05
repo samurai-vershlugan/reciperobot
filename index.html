@@ -1886,7 +1886,10 @@
           oninput="this.value=this.value.replace(/[^0-9]/g,'')" />
         <button class="login-btn" onclick="verifyOTP()">Verify Code</button>
         <div id="loginOTPError" class="login-error"></div>
-        <button class="login-back" onclick="backToEmail()">← Use different email</button>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
+          <button class="login-back" onclick="backToEmail()">← Use different email</button>
+          <button class="login-back" id="resendBtn" onclick="resendCode()" style="display:none">Resend code →</button>
+        </div>
       </div>
 
       <div id="loginStepFamily" style="display:none">
@@ -4044,7 +4047,6 @@ async function verifyOTP() {
   document.querySelector('#loginStepOTP .login-btn').disabled = true;
   try {
     const data = await sb.authPost('verify', { type: 'email', email, token });
-    // Save session
     AUTH_TOKEN = data.access_token;
     currentUser = data.user;
     localStorage.setItem('mealos-session', JSON.stringify({
@@ -4055,9 +4057,29 @@ async function verifyOTP() {
     }));
     await resolveFamily();
   } catch(e) {
-    errEl.textContent = 'Invalid or expired code. Please try again.';
+    errEl.textContent = 'Invalid or expired code.';
+    // Show resend button
+    document.getElementById('resendBtn').style.display = 'block';
+    document.getElementById('loginOTP').value = '';
     setLoginSpinner(false);
     document.querySelector('#loginStepOTP .login-btn').disabled = false;
+  }
+}
+
+async function resendCode() {
+  const email = document.getElementById('loginEmail').value.trim();
+  if (!email) { backToEmail(); return; }
+  document.getElementById('resendBtn').style.display = 'none';
+  document.getElementById('loginOTPError').textContent = '';
+  document.getElementById('loginOTP').value = '';
+  setLoginSpinner(true);
+  try {
+    await sb.authPost('otp', { email, options: { shouldCreateUser: true } });
+    document.getElementById('loginOTPHint').textContent = `New code sent to ${email}`;
+  } catch(e) {
+    document.getElementById('loginOTPError').textContent = 'Failed to resend. Try again.';
+  } finally {
+    setLoginSpinner(false);
   }
 }
 
@@ -4066,6 +4088,7 @@ function backToEmail() {
   document.getElementById('loginStepEmail').style.display = 'block';
   document.getElementById('loginOTP').value = '';
   document.getElementById('loginOTPError').textContent = '';
+  document.getElementById('resendBtn').style.display = 'none';
 }
 
 async function resolveFamily() {
