@@ -2231,8 +2231,9 @@
     </p>
 
     <!-- Pantry pre-load banner -->
-    <div id="robotPantryBanner" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-family:'DM Mono',monospace;font-size:11px;color:var(--text-muted)">
-      ✓ Pre-loaded <span id="robotPantryCount">0</span> items from your pantry
+    <div id="robotPantryBanner" style="display:none;background:var(--surface2);border:1px solid var(--accent4);border-radius:8px;padding:10px 14px;margin-bottom:14px;">
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--accent4);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px">✓ Your pantry (<span id="robotPantryCount">0</span> items)</div>
+      <div id="robotPantryList" style="font-size:12px;color:var(--text-muted);line-height:1.5"></div>
     </div>
 
     <!-- Protein focus filter -->
@@ -2249,7 +2250,7 @@
     </div>
 
     <!-- Ingredient grid -->
-    <div class="swap-tag-label" style="margin-bottom:8px">Tap what you have</div>
+    <div class="swap-tag-label" style="margin-bottom:8px">Tap anything extra you have on hand</div>
     <div id="robotIngredientGrid" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:14px"></div>
 
     <!-- Free text add -->
@@ -2263,7 +2264,7 @@
 
     <!-- Selected ingredients display -->
     <div id="robotSelectedWrap" style="display:none;margin-bottom:14px">
-      <div class="swap-tag-label" style="margin-bottom:6px">What you have (<span id="robotSelectedCount">0</span> items)</div>
+      <div class="swap-tag-label" style="margin-bottom:6px">Extra items (<span id="robotSelectedCount">0</span> added)</div>
       <div id="robotSelectedTags" style="display:flex;flex-wrap:wrap;gap:5px"></div>
     </div>
 
@@ -5052,21 +5053,21 @@ let robotSelected = new Set();
 let robotProtein = null;
 
 function openRobotModal() {
-  robotSelected = new Set();
+  robotSelected = new Set();  // only EXTRA items beyond pantry
   robotProtein = null;
   document.getElementById('robotResults').innerHTML = '';
   document.getElementById('robotFreeText').value = '';
 
-  // Pre-load pantry items into robotSelected for display
+  // Show pantry summary banner but DON'T add to robotSelected
+  // haveIngredients is checked separately in analyzeLibraryLocally
   const pantryItems = Object.keys(haveIngredients).filter(k => haveIngredients[k]);
-  pantryItems.forEach(item => robotSelected.add(item.toLowerCase()));
-  // Note: haveIngredients is also checked directly in analyzeLibraryLocally
-  // so we don't need to worry about duplicates in the analysis
-
   const banner = document.getElementById('robotPantryBanner');
   if (pantryItems.length) {
     banner.style.display = 'block';
     document.getElementById('robotPantryCount').textContent = pantryItems.length;
+    // Show the pantry items as a readable list in the banner
+    const list = document.getElementById('robotPantryList');
+    if (list) list.textContent = pantryItems.slice(0, 8).join(', ') + (pantryItems.length > 8 ? ` +${pantryItems.length - 8} more` : '');
   } else {
     banner.style.display = 'none';
   }
@@ -5202,11 +5203,12 @@ function robotRemoveItem(item) {
 
 // Analyze library locally first
 function analyzeLibraryLocally() {
-  // Combine manually selected + pantry items into one set
-  const have = [...new Set([
-    ...[...robotSelected].map(s => s.toLowerCase()),
-    ...Object.keys(haveIngredients).filter(k => haveIngredients[k]).map(s => s.toLowerCase())
-  ])];
+  // Pantry from Supabase (persistent) + extra items tapped in Robot (session)
+  const pantry = Object.keys(haveIngredients)
+    .filter(k => haveIngredients[k])
+    .map(s => s.toLowerCase());
+  const extra = [...robotSelected].map(s => s.toLowerCase());
+  const have = [...new Set([...pantry, ...extra])];
   // Exclude prep recipes, friday specials, and no-cook easy meals
   const NO_COOK = new Set(['Leftovers Night','Freezer Dive','Takeout','Pizza Night','Frozen Pizza','Passover Seder']);
   let library = getAllRecipes().filter(r =>
