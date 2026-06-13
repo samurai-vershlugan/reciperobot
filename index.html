@@ -5040,9 +5040,11 @@ function openRobotModal() {
   document.getElementById('robotResults').innerHTML = '';
   document.getElementById('robotFreeText').value = '';
 
-  // Pre-load pantry items
+  // Pre-load pantry items into robotSelected for display
   const pantryItems = Object.keys(haveIngredients).filter(k => haveIngredients[k]);
   pantryItems.forEach(item => robotSelected.add(item.toLowerCase()));
+  // Note: haveIngredients is also checked directly in analyzeLibraryLocally
+  // so we don't need to worry about duplicates in the analysis
 
   const banner = document.getElementById('robotPantryBanner');
   if (pantryItems.length) {
@@ -5183,8 +5185,19 @@ function robotRemoveItem(item) {
 
 // Analyze library locally first
 function analyzeLibraryLocally() {
-  const have = [...robotSelected].map(s => s.toLowerCase());
-  let library = getAllRecipes().filter(r => !(r.tags||[]).includes('prep') && !r.friday);
+  // Combine manually selected + pantry items into one set
+  const have = [...new Set([
+    ...[...robotSelected].map(s => s.toLowerCase()),
+    ...Object.keys(haveIngredients).filter(k => haveIngredients[k]).map(s => s.toLowerCase())
+  ])];
+  // Exclude prep recipes, friday specials, and no-cook easy meals
+  const NO_COOK = new Set(['Leftovers Night','Freezer Dive','Takeout','Pizza Night','Frozen Pizza','Passover Seder']);
+  let library = getAllRecipes().filter(r =>
+    !(r.tags||[]).includes('prep') &&
+    !r.friday &&
+    !NO_COOK.has(r.name) &&
+    (r.ingredients||[]).length > 0
+  );
 
   // Filter by protein if selected
   if (robotProtein) {
@@ -5354,12 +5367,14 @@ function buildRobotNewCard(r) {
 function robotAddToGrocery(items) {
   const key = getWeekKey(currentWeekOffset);
   items.forEach(item => {
+    // Add as unchecked grocery item for current week
     const ik = `${key}-${item}`;
-    if (!checkedIngredients[ik]) {
-      // Add as unchecked so it appears in grocery list
+    if (checkedIngredients[ik] === undefined) {
+      checkedIngredients[ik] = false;
     }
   });
   showToast(`Added ${items.length} item${items.length>1?'s':''} to grocery list`);
+  try { localStorage.setItem('mealos-checked', JSON.stringify(checkedIngredients)); } catch(e) {}
   renderGroceryList();
   renderAlexaCommands();
 }
