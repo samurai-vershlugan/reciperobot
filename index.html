@@ -3116,7 +3116,7 @@ function renderGroceryList() {
       const isOverridden = !!storeOverrides[itemKey];
       const div = document.createElement('div');
       div.className = `ingredient-item ${checked}`;
-      div.onclick = () => toggleIngredient(itemKey, div);
+      div.onclick = () => toggleIngredient(itemKey, div, ing.item);
       div.innerHTML = `
         <div class="ingredient-cb">${checked ? '✓' : ''}</div>
         <span class="ing-name">${ing.item}</span>
