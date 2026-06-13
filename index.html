@@ -1885,6 +1885,50 @@
   html.dark input, html.dark textarea, html.dark select { background: var(--surface2) !important; color: var(--text) !important; border-color: var(--border) !important; }
   html.dark .login-card { background: var(--surface); }
 
+  .pantry-btn {
+    background: transparent;
+    color: var(--text-muted);
+    border: 1.5px solid var(--border2);
+  }
+  .pantry-btn:hover { border-color: var(--accent3); color: var(--accent3); }
+
+  .pantry-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    transition: background 0.1s;
+    cursor: pointer;
+  }
+  .pantry-item:hover { background: var(--surface2); }
+  .pantry-item-name {
+    flex: 1;
+    font-size: 13px;
+    color: var(--text);
+  }
+  .pantry-item-remove {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 14px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    opacity: 0.4;
+    transition: opacity 0.15s;
+    line-height: 1;
+  }
+  .pantry-item-remove:hover { opacity: 1; color: #c45c3a; }
+  .pantry-section-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    padding: 8px 10px 4px;
+  }
+
   /* Signout btn */
   .signout-btn {
     font-family: 'DM Mono', monospace;
@@ -1979,6 +2023,7 @@
       <div class="nav-row-bottom">
         <button class="nav-action save-btn" onclick="saveWeekSnapshot()" title="Save this week to history">Save Week</button>
         <button class="nav-action history-btn" onclick="showHistoryPage()">Saved Weeks</button>
+        <button class="nav-action pantry-btn" onclick="openPantryModal()">🥫 Pantry</button>
         <button class="nav-action share-btn" onclick="sharePlan()">Share</button>
       </div>
     </div>
@@ -2273,6 +2318,39 @@
     </button>
 
     <div id="robotResults"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="pantryModal" onclick="if(event.target.id==='pantryModal') closePantryModal()">
+  <div class="modal" style="position:relative;max-width:500px;width:95%;max-height:85vh;overflow-y:auto">
+    <button class="modal-close" onclick="closePantryModal()">×</button>
+    <h3>🥫 My Pantry</h3>
+    <p style="color:var(--text-muted);font-size:13px;margin-bottom:16px;line-height:1.5">
+      Items marked as "I have this" — Recipe Robot uses these automatically.
+    </p>
+
+    <!-- Add item -->
+    <div style="display:flex;gap:8px;margin-bottom:16px">
+      <input id="pantryAddInput" class="text-input" type="text" placeholder="Add an item... (e.g. chicken thighs)"
+        style="flex:1" onkeydown="if(event.key==='Enter') pantryAddItem()" />
+      <button class="confirm-btn" onclick="pantryAddItem()" style="flex:0 0 auto;padding:8px 14px">Add</button>
+    </div>
+
+    <!-- Search -->
+    <input id="pantrySearchInput" class="text-input" type="text" placeholder="Search pantry..."
+      style="margin-bottom:12px;width:100%;box-sizing:border-box"
+      oninput="renderPantryItems()" />
+
+    <!-- Stats -->
+    <div id="pantryStats" style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px"></div>
+
+    <!-- Items grid -->
+    <div id="pantryItemsList"></div>
+
+    <!-- Clear all -->
+    <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border);text-align:right">
+      <button class="login-back" onclick="pantryConfirmClear()" style="color:#c45c3a">Clear all pantry items</button>
+    </div>
   </div>
 </div>
 
