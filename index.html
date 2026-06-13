@@ -1958,12 +1958,16 @@
       <select id="generateTagFilter" class="wake-select" style="height:34px;padding:0 10px" title="Generate preference">
         <option value="">Any meal</option>
       </select>
-      <button class="nav-action generate-btn" onclick="generateWeek()">↻ Generate</button>
-      <button class="nav-action save-btn" onclick="saveWeekSnapshot()" title="Save this week to history">Save Week</button>
-      <button class="nav-action discover-btn" onclick="openDiscoverModal()">✦ Discover</button>
-      <button class="nav-action robot-btn" onclick="openRobotModal()">🤖 Robot</button>
-      <button class="nav-action share-btn" onclick="sharePlan()">Share</button>
-      <button class="nav-action history-btn" onclick="showHistoryPage()">Saved Weeks</button>
+      <div class="nav-row-top">
+        <button class="nav-action generate-btn" onclick="generateWeek()">↻ Generate</button>
+        <button class="nav-action discover-btn" onclick="openDiscoverModal()">✦ Discover</button>
+        <button class="nav-action robot-btn" onclick="openRobotModal()">🤖 Robot</button>
+      </div>
+      <div class="nav-row-bottom">
+        <button class="nav-action save-btn" onclick="saveWeekSnapshot()" title="Save this week to history">Save Week</button>
+        <button class="nav-action history-btn" onclick="showHistoryPage()">Saved Weeks</button>
+        <button class="nav-action share-btn" onclick="sharePlan()">Share</button>
+      </div>
     </div>
   </div>
   </div>
