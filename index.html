@@ -53,7 +53,7 @@
 
   header {
     border-bottom: 1px solid var(--border);
-    padding: 24px 40px;
+    padding: 8px 24px;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -156,12 +156,25 @@
     padding-left: 16px;
     padding-right: 16px;
   }
+  .nav-row-top, .nav-row-bottom {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+    justify-content: flex-end;
+  }
+  .header-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-left: auto;
+    align-items: flex-end;
+  }
   .nav-action:hover { transform: translateY(-1px); filter: brightness(1.12); }
 
   .generate-btn { background: var(--accent);  color: var(--bg);  border: 1px solid transparent; }
   .save-btn     { background: #4466cc;         color: #fff;       border: 1px solid transparent; }
-  .share-btn    { background: #2e7d5e;         color: #fff;       border: 1px solid transparent; }
-  .history-btn  { background: transparent;     color: var(--text-muted); border: 1px solid var(--border); }
+  .share-btn    { background: transparent; color: var(--text-muted); border: 1.5px solid var(--border2); }
+  .history-btn  { background: transparent; color: var(--text-muted); border: 1.5px solid var(--border2); }
   .history-btn:hover { border-color: var(--accent); color: var(--accent); filter: none; transform: translateY(-1px); }
 
 
