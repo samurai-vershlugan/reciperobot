@@ -5590,7 +5590,8 @@ function analyzeLibraryLocally() {
 }
 
 async function runRobot() {
-  if (robotSelected.size === 0) { showToast('Add some ingredients first!'); return; }
+  var pantrySize = Object.keys(haveIngredients).filter(function(k) { return haveIngredients[k]; }).length;
+  if (pantrySize === 0 && robotSelected.size === 0) { showToast('Add some pantry items first!'); return; }
 
   const btn = document.getElementById('robotRunBtn');
   const resultsEl = document.getElementById('robotResults');
