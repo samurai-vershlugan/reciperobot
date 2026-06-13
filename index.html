@@ -2790,6 +2790,21 @@ function toggleLock(dayIndex) {
   renderWeek();
 }
 
+function toggleDarkMode() {
+  const isDark = document.documentElement.classList.toggle('dark');
+  localStorage.setItem('mealos-dark', isDark ? '1' : '0');
+  const btn = document.getElementById('darkToggleBtn');
+  if (btn) btn.textContent = isDark ? '☀' : '🌙';
+}
+function initDarkMode() {
+  const pref = localStorage.getItem('mealos-dark');
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  if (pref === '1' || (pref === null && prefersDark)) {
+    document.documentElement.classList.add('dark');
+    const btn = document.getElementById('darkToggleBtn');
+    if (btn) btn.textContent = '☀';
+  }
+}
 function loadLockedDays() {
   try { lockedDays = JSON.parse(localStorage.getItem('mealos-locks') || '{}'); } catch(e) {}
   // Always start the current week unlocked
