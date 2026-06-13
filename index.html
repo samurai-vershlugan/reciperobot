@@ -2804,6 +2804,15 @@ function initDarkMode() {
     const btn = document.getElementById('darkToggleBtn');
     if (btn) btn.textContent = '☀';
   }
+  // Listen for device dark mode changes in real time
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+    // Only auto-switch if user hasn't manually set a preference
+    if (localStorage.getItem('mealos-dark') === null) {
+      document.documentElement.classList.toggle('dark', e.matches);
+      const btn = document.getElementById('darkToggleBtn');
+      if (btn) btn.textContent = e.matches ? '☀' : '🌙';
+    }
+  });
 }
 function loadLockedDays() {
   try { lockedDays = JSON.parse(localStorage.getItem('mealos-locks') || '{}'); } catch(e) {}
