@@ -1769,6 +1769,60 @@
   .discover-loading-dots span:nth-child(2) { animation-delay: 0.2s; }
   .discover-loading-dots span:nth-child(3) { animation-delay: 0.4s; }
 
+
+  .robot-section {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 8px;
+    overflow: hidden;
+  }
+  .robot-section-toggle {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 11px 14px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    background: var(--surface2);
+    user-select: none;
+    transition: background 0.15s;
+  }
+  .robot-section-toggle:hover { background: var(--border); }
+  .robot-arrow {
+    font-size: 18px;
+    color: var(--text-muted);
+    font-weight: 300;
+    transition: transform 0.2s;
+    line-height: 1;
+  }
+  .robot-arrow.open { transform: rotate(45deg); }
+  .robot-section-body { padding: 4px 14px 10px; }
+  .robot-pantry-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-family: var(--font-mono, monospace);
+    font-size: 10px;
+    padding: 3px 8px 3px 10px;
+    border-radius: 100px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text-mid);
+  }
+  .robot-pantry-chip-remove {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 12px;
+    padding: 0 2px;
+    line-height: 1;
+    opacity: 0.6;
+  }
+  .robot-pantry-chip-remove:hover { opacity: 1; color: var(--accent); }
+
   .robot-btn {
     background: linear-gradient(135deg, #2a6e4a, #3a9e6a);
     color: #fff;
@@ -2268,56 +2322,56 @@
 </div>
 
 <div class="modal-overlay" id="robotModal" onclick="if(event.target.id==='robotModal') closeRobotModal()">
-  <div class="modal robot-modal" style="position:relative;max-width:600px;width:95%">
-    <button class="modal-close" onclick="closeRobotModal()">×</button>
-    <h3>🤖 Recipe Robot</h3>
-    <p style="color:var(--text-muted);font-size:13px;margin-bottom:16px;line-height:1.6">
-      Tell me what's in your fridge and I'll find what you can make — right now or with 1–2 extra items.
-    </p>
+  <div class="modal robot-modal" style="position:relative;max-width:560px;width:95%;max-height:90vh;overflow-y:auto">
+    <button class="modal-close" onclick="closeRobotModal()">&#215;</button>
+    <h3>&#129302; Recipe Robot</h3>
 
-    <!-- Pantry pre-load banner -->
-    <div id="robotPantryBanner" style="display:none;background:var(--surface2);border:1px solid var(--accent4);border-radius:8px;padding:10px 14px;margin-bottom:14px;">
-      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--accent4);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px">✓ Your pantry (<span id="robotPantryCount">0</span> items)</div>
-      <div id="robotPantryList" style="font-size:12px;color:var(--text-muted);line-height:1.5"></div>
+    <div id="robotResultsView" style="display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div style="font-family:var(--font-mono,monospace);font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted)">What you can make</div>
+        <button class="login-back" onclick="robotShowSetup()">&#8592; Back to setup</button>
+      </div>
+      <div id="robotResults"></div>
     </div>
 
-    <!-- Protein focus filter -->
-    <div class="swap-tag-label" style="margin-bottom:8px">Focus on a protein <span style="opacity:0.5">(optional)</span></div>
-    <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:14px" id="robotProteinBtns">
-      <button class="cat-btn" data-protein="beef">Beef</button>
-      <button class="cat-btn" data-protein="chicken">Chicken</button>
-      <button class="cat-btn" data-protein="lamb">Lamb</button>
-      <button class="cat-btn" data-protein="pork">Pork</button>
-      <button class="cat-btn" data-protein="salmon">Salmon</button>
-      <button class="cat-btn" data-protein="shrimp">Shrimp</button>
-      <button class="cat-btn" data-protein="turkey">Turkey</button>
-      <button class="cat-btn" data-protein="vegetarian">Vegetarian</button>
+    <div id="robotSetupView">
+      <div class="robot-section">
+        <div class="robot-section-toggle" onclick="robotToggle('robotProteinBody','robotProteinArrow')">
+          <span>Protein focus <span id="robotProteinLabel" style="color:var(--accent);font-weight:600"></span></span>
+          <span id="robotProteinArrow" class="robot-arrow">+</span>
+        </div>
+        <div id="robotProteinBody" style="display:none" class="robot-section-body">
+          <div style="display:flex;flex-wrap:wrap;gap:5px;padding:8px 0" id="robotProteinBtns">
+            <button class="cat-btn" data-protein="beef">Beef</button>
+            <button class="cat-btn" data-protein="chicken">Chicken</button>
+            <button class="cat-btn" data-protein="lamb">Lamb</button>
+            <button class="cat-btn" data-protein="pork">Pork</button>
+            <button class="cat-btn" data-protein="salmon">Salmon</button>
+            <button class="cat-btn" data-protein="shrimp">Shrimp</button>
+            <button class="cat-btn" data-protein="turkey">Turkey</button>
+            <button class="cat-btn" data-protein="vegetarian">Vegetarian</button>
+          </div>
+        </div>
+      </div>
+      <div class="robot-section">
+        <div class="robot-section-toggle" onclick="robotToggle('robotPantryBody','robotPantryArrow')">
+          <span>My Pantry <span id="robotPantryCount2" style="color:var(--accent4)"></span></span>
+          <span id="robotPantryArrow" class="robot-arrow">+</span>
+        </div>
+        <div id="robotPantryBody" style="display:none" class="robot-section-body">
+          <div id="robotPantryChips" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px;max-height:150px;overflow-y:auto"></div>
+          <div style="display:flex;gap:6px;margin-top:6px">
+            <input id="robotPantryAdd" class="login-input" type="text" placeholder="Add to pantry..."
+              style="margin-bottom:0;flex:1;font-size:13px;padding:7px 12px"
+              onkeydown="if(event.key==='Enter') robotQuickAddPantry()" />
+            <button class="confirm-btn" onclick="robotQuickAddPantry()" style="padding:7px 12px">Add</button>
+          </div>
+        </div>
+      </div>
+      <button class="login-btn" id="robotRunBtn" onclick="runRobot()" style="margin-top:14px">
+        Find What I Can Make
+      </button>
     </div>
-
-    <!-- Ingredient grid -->
-    <div class="swap-tag-label" style="margin-bottom:8px">Tap anything extra you have on hand</div>
-    <div id="robotIngredientGrid" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:14px"></div>
-
-    <!-- Free text add -->
-    <div style="display:flex;gap:8px;margin-bottom:16px">
-      <input id="robotFreeText" class="login-input" type="text" placeholder="Add anything else... (e.g. leftover rice, jalapeños)"
-        style="margin-bottom:0;flex:1;font-size:13px;padding:8px 12px"
-        onkeydown="if(event.key==='Enter') robotAddFreeText()" />
-      <button class="confirm-btn" id="robotMicBtn" onclick="robotStartVoice()" title="Speak your ingredients" style="flex:0 0 auto;padding:8px 14px;font-size:16px">🎤</button>
-      <button class="confirm-btn" onclick="robotAddFreeText()" style="flex:0 0 auto;padding:8px 14px">Add</button>
-    </div>
-
-    <!-- Selected ingredients display -->
-    <div id="robotSelectedWrap" style="display:none;margin-bottom:14px">
-      <div class="swap-tag-label" style="margin-bottom:6px">Extra items (<span id="robotSelectedCount">0</span> added)</div>
-      <div id="robotSelectedTags" style="display:flex;flex-wrap:wrap;gap:5px"></div>
-    </div>
-
-    <button class="login-btn" id="robotRunBtn" onclick="runRobot()" style="margin-bottom:16px">
-      🤖 Find What I Can Make
-    </button>
-
-    <div id="robotResults"></div>
   </div>
 </div>
 
@@ -5264,44 +5318,122 @@ let robotSelected = new Set();
 let robotProtein = null;
 
 function openRobotModal() {
-  robotSelected = new Set();  // only EXTRA items beyond pantry
   robotProtein = null;
   document.getElementById('robotResults').innerHTML = '';
-  document.getElementById('robotFreeText').value = '';
+  document.getElementById('robotResultsView').style.display = 'none';
+  document.getElementById('robotSetupView').style.display = 'block';
 
-  // Show pantry summary banner but DON'T add to robotSelected
-  // haveIngredients is checked separately in analyzeLibraryLocally
-  const pantryItems = Object.keys(haveIngredients).filter(k => haveIngredients[k]);
-  const banner = document.getElementById('robotPantryBanner');
-  if (pantryItems.length) {
-    banner.style.display = 'block';
-    document.getElementById('robotPantryCount').textContent = pantryItems.length;
-    // Show the pantry items as a readable list in the banner
-    const list = document.getElementById('robotPantryList');
-    if (list) list.textContent = pantryItems.slice(0, 8).join(', ') + (pantryItems.length > 8 ? ` +${pantryItems.length - 8} more` : '');
-  } else {
-    banner.style.display = 'none';
-  }
+  // Pantry count badge
+  var pantryItems = Object.keys(haveIngredients).filter(function(k) { return haveIngredients[k]; });
+  var countEl = document.getElementById('robotPantryCount2');
+  if (countEl) countEl.textContent = pantryItems.length ? '(' + pantryItems.length + ' items)' : '(empty)';
+
+  // Render pantry chips
+  robotRenderPantryChips(pantryItems);
 
   // Wire protein buttons
-  document.querySelectorAll('#robotProteinBtns .cat-btn').forEach(btn => {
+  document.querySelectorAll('#robotProteinBtns .cat-btn').forEach(function(btn) {
     btn.classList.remove('active');
-    btn.addEventListener('click', () => {
+    btn.onclick = function() {
       if (robotProtein === btn.dataset.protein) {
         robotProtein = null;
         btn.classList.remove('active');
+        var lbl = document.getElementById('robotProteinLabel');
+        if (lbl) lbl.textContent = '';
       } else {
         robotProtein = btn.dataset.protein;
-        document.querySelectorAll('#robotProteinBtns .cat-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('#robotProteinBtns .cat-btn').forEach(function(b) { b.classList.remove('active'); });
         btn.classList.add('active');
+        var lbl = document.getElementById('robotProteinLabel');
+        if (lbl) lbl.textContent = '(' + btn.dataset.protein + ')';
       }
-    });
+    };
   });
 
-  renderRobotGrid();
-  renderRobotSelected();
   document.getElementById('robotModal').classList.add('open');
 }
+
+function robotRenderPantryChips(pantryItems) {
+  var chipsEl = document.getElementById('robotPantryChips');
+  if (!chipsEl) return;
+  chipsEl.innerHTML = '';
+  if (!pantryItems || !pantryItems.length) {
+    chipsEl.innerHTML = '<span style="color:var(--text-muted);font-size:12px">No pantry items yet.</span>';
+    return;
+  }
+  pantryItems.sort().forEach(function(item) {
+    var chip = document.createElement('span');
+    chip.className = 'robot-pantry-chip';
+    var nameNode = document.createTextNode(item + ' ');
+    var removeBtn = document.createElement('button');
+    removeBtn.className = 'robot-pantry-chip-remove';
+    removeBtn.textContent = 'x';
+    (function(i) { removeBtn.onclick = function() { robotRemovePantryItem(i); }; })(item);
+    chip.appendChild(nameNode);
+    chip.appendChild(removeBtn);
+    chipsEl.appendChild(chip);
+  });
+}
+
+function robotToggle(bodyId, arrowId) {
+  var body = document.getElementById(bodyId);
+  var arrow = document.getElementById(arrowId);
+  if (!body) return;
+  var isOpen = body.style.display !== 'none';
+  body.style.display = isOpen ? 'none' : 'block';
+  if (arrow) arrow.classList.toggle('open', !isOpen);
+}
+
+function robotShowSetup() {
+  document.getElementById('robotResultsView').style.display = 'none';
+  document.getElementById('robotSetupView').style.display = 'block';
+}
+
+async function robotQuickAddPantry() {
+  var input = document.getElementById('robotPantryAdd');
+  var val = input.value.trim().toLowerCase();
+  if (!val) return;
+  var items = val.split(',').map(function(s) { return s.trim(); }).filter(Boolean);
+  for (var i = 0; i < items.length; i++) {
+    var item = items[i];
+    if (!haveIngredients[item]) {
+      haveIngredients[item] = true;
+      if (FAMILY_ID && AUTH_TOKEN) {
+        try {
+          await fetch(SUPABASE_URL + '/rest/v1/pantry', {
+            method: 'POST',
+            headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + AUTH_TOKEN, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+            body: JSON.stringify({ family_id: FAMILY_ID, item_name: item, have_it: true })
+          });
+        } catch(e) { console.warn('Pantry add:', e); }
+      }
+    }
+  }
+  input.value = '';
+  var pantryItems = Object.keys(haveIngredients).filter(function(k) { return haveIngredients[k]; });
+  var countEl = document.getElementById('robotPantryCount2');
+  if (countEl) countEl.textContent = '(' + pantryItems.length + ' items)';
+  robotRenderPantryChips(pantryItems);
+  showToast('Added to pantry');
+}
+
+async function robotRemovePantryItem(item) {
+  delete haveIngredients[item];
+  if (FAMILY_ID && AUTH_TOKEN) {
+    try {
+      await fetch(SUPABASE_URL + '/rest/v1/pantry?family_id=eq.' + FAMILY_ID + '&item_name=eq.' + encodeURIComponent(item), {
+        method: 'DELETE',
+        headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + AUTH_TOKEN, 'Prefer': 'return=minimal' }
+      });
+    } catch(e) { console.warn('Pantry remove:', e); }
+  }
+  var pantryItems = Object.keys(haveIngredients).filter(function(k) { return haveIngredients[k]; });
+  var countEl = document.getElementById('robotPantryCount2');
+  if (countEl) countEl.textContent = '(' + pantryItems.length + ' items)';
+  robotRenderPantryChips(pantryItems);
+  showToast('Removed from pantry');
+}
+
 
 function closeRobotModal() {
   document.getElementById('robotModal').classList.remove('open');
@@ -5518,6 +5650,9 @@ Only suggest recipes where missing ingredients are common, cheap, and easy to fi
   } catch(e) { console.warn('Robot new recipe fetch failed:', e); }
 
   btn.disabled = false;
+  document.getElementById('robotSetupView').style.display = 'none';
+  document.getElementById('robotResultsView').style.display = 'block';
+  document.getElementById('robotModal').querySelector('.modal').scrollTop = 0;
   renderRobotResults(local, newRecipes);
 }
 
