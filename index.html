@@ -6068,8 +6068,11 @@ function openDiscoverEditModal(r) {
         <textarea id="deIngredients" style="width:100%;box-sizing:border-box;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'DM Mono',monospace;font-size:11px;padding:10px;min-height:160px;resize:vertical;outline:none;margin-bottom:10px"></textarea>
         <label class="input-label">Steps <span style="opacity:0.5;font-size:9px">(one per line)</span></label>
         <textarea id="deSteps" style="width:100%;box-sizing:border-box;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:12px;padding:10px;min-height:120px;resize:vertical;outline:none;margin-bottom:10px"></textarea>
-        <label class="input-label">Source URL <span style="opacity:0.5;font-size:9px">(optional)</span></label>
-        <input id="deUrl" class="text-input" type="text" placeholder="https://..." style="margin-bottom:16px" />
+        <label class="input-label">Source URL <span style="opacity:0.5;font-size:9px">(paste and import)</span></label>
+        <div style="display:flex;gap:8px;margin-bottom:16px">
+          <input id="deUrl" class="text-input" type="text" placeholder="https://..." style="margin-bottom:0;flex:1" />
+          <button class="confirm-btn" id="deImportBtn" onclick="importRecipeFromUrl()" style="flex:0 0 auto;padding:8px 14px;white-space:nowrap">Import ↓</button>
+        </div>
         <div style="display:flex;gap:8px;justify-content:flex-end">
           <button class="confirm-btn" style="background:#333;color:#ccc" onclick="closeDiscoverEditModal()">Cancel</button>
           <button class="confirm-btn" onclick="confirmDiscoverEdit()">Save to Library ✓</button>
@@ -6095,6 +6098,54 @@ function closeDiscoverEditModal() {
   const modal = document.getElementById('discoverEditModal');
   if (modal) modal.classList.remove('open');
   pendingDiscoverRecipe = null;
+}
+
+async function importRecipeFromUrl() {
+  const url = document.getElementById('deUrl').value.trim();
+  if (!url) { showToast('Paste a recipe URL first'); return; }
+  if (!/^https?:\/\//.test(url)) { showToast('Enter a valid URL (https://...)'); return; }
+
+  const btn = document.getElementById('deImportBtn');
+  const origText = btn.textContent;
+  btn.textContent = 'Importing...';
+  btn.disabled = true;
+
+  try {
+    const resp = await fetch(SUPABASE_URL + '/functions/v1/import-recipe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + AUTH_TOKEN },
+      body: JSON.stringify({ url })
+    });
+    const data = await resp.json();
+
+    if (data.error) {
+      showToast(data.error);
+      btn.textContent = origText;
+      btn.disabled = false;
+      return;
+    }
+
+    // Populate fields
+    if (data.name && !document.getElementById('deRecipeName').value.trim()) {
+      document.getElementById('deRecipeName').value = data.name;
+    }
+    if (data.ingredients && data.ingredients.length) {
+      // Default all imported ingredients to TJ's — user can edit store
+      document.getElementById('deIngredients').value = data.ingredients
+        .map(function(i) { return i + ', tj'; }).join('\n');
+    }
+    if (data.steps && data.steps.length) {
+      document.getElementById('deSteps').value = data.steps.join('\n');
+    }
+
+    showToast('Imported ' + (data.ingredients ? data.ingredients.length : 0) + ' ingredients!');
+  } catch(e) {
+    console.error('Import error:', e);
+    showToast('Could not import from this URL');
+  } finally {
+    btn.textContent = origText;
+    btn.disabled = false;
+  }
 }
 
 function confirmDiscoverEdit() {
