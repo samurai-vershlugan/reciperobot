@@ -5315,6 +5315,7 @@ function renderPantryItems() {
       removeBtn.addEventListener('click', function() { pantryRemoveItem(item); });
       row.appendChild(check);
       row.appendChild(nameSpan);
+      row.appendChild(makePantryQtyStepper(item));
       row.appendChild(removeBtn);
       el.appendChild(row);
     });
