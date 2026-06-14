@@ -3675,6 +3675,10 @@ function recipeUsesProtein(recipe, proteinLabel) {
   const pf = PROTEIN_FILTERS.find(p => p.label === proteinLabel);
   if (!pf) return false;
   const kw = pf.keywords;
+  // Check manual tags first (e.g. user added "shrimp" tag)
+  if (recipe.tags && recipe.tags.some(t => t.toLowerCase() === proteinLabel.toLowerCase())) {
+    return true;
+  }
   // Check protein picker options
   if (recipe.proteins) {
     if (recipe.proteins.some(p =>
