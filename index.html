@@ -1998,6 +1998,24 @@
   }
   .signout-btn:hover { opacity: 1; }
 
+
+  .pantry-qty-stepper {
+    display: inline-flex; align-items: center; gap: 2px;
+    background: rgba(107,143,94,0.12);
+    border: 1px solid rgba(107,143,94,0.25);
+    border-radius: 100px; padding: 1px 4px; margin-right: 4px;
+    vertical-align: middle;
+  }
+  .qty-btn {
+    background: none; border: none; color: var(--accent4, #6B8F5E);
+    cursor: pointer; font-size: 14px; font-weight: 600; line-height: 1;
+    padding: 0 3px; transition: opacity 0.15s;
+  }
+  .qty-btn:hover { opacity: 0.7; }
+  .qty-label {
+    font-family: var(--font-mono, monospace); font-size: 11px;
+    color: var(--accent4, #6B8F5E); min-width: 16px; text-align: center; font-weight: 600;
+  }
 </style>
 
 <!-- ─── LOGIN SCREEN ─────────────────────────────────────────────────────── -->
@@ -3117,16 +3135,28 @@ function renderGroceryList() {
       const div = document.createElement('div');
       div.className = `ingredient-item ${checked}`;
       div.onclick = () => toggleIngredient(itemKey, div, ing.item);
-      div.innerHTML = `
-        <div class="ingredient-cb">${checked ? '✓' : ''}</div>
-        <span class="ing-name">${ing.item}</span>
-        <select class="store-select store-select-${sk}${isOverridden ? ' overridden' : ''}"
-          onclick="event.stopPropagation()"
-          onchange="changeStore('${itemKey}', this.value)">
-          ${['tj','costco','safeway','wf'].map(s =>
-            `<option value="${s}"${sk===s?' selected':''}>${STORE_LABELS[s]}</option>`
-          ).join('')}
-        </select>`;
+      const cbDiv = document.createElement('div');
+      cbDiv.className = 'ingredient-cb';
+      cbDiv.textContent = checked ? '✓' : '';
+      div.appendChild(cbDiv);
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'ing-name';
+      nameSpan.textContent = ing.item;
+      div.appendChild(nameSpan);
+      if (haveIngredients[ing.item]) {
+        div.appendChild(makePantryQtyStepper(ing.item));
+      }
+      const sel = document.createElement('select');
+      sel.className = `store-select store-select-${sk}${isOverridden ? ' overridden' : ''}`;
+      sel.onclick = (e) => e.stopPropagation();
+      sel.onchange = () => changeStore(itemKey, sel.value);
+      ['tj','costco','safeway','wf'].forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s; opt.textContent = STORE_LABELS[s];
+        if (sk === s) opt.selected = true;
+        sel.appendChild(opt);
+      });
+      div.appendChild(sel);
       group.appendChild(div);
     });
     
@@ -3183,6 +3213,50 @@ async function toggleIngredient(itemKey, el) {
   renderAlexaCommands();
   updateConfirmBar();
 }
+
+function pantryQtyOf(itemName) {
+  const v = haveIngredients[itemName];
+  if (v && typeof v === 'object') return parseInt(v.qty) || 0;
+  return 0;
+}
+
+function makePantryQtyStepper(itemName) {
+  const qty = pantryQtyOf(itemName);
+  const wrap = document.createElement('span');
+  wrap.className = 'pantry-qty-stepper';
+  wrap.onclick = (e) => e.stopPropagation();
+  const minus = document.createElement('button');
+  minus.className = 'qty-btn';
+  minus.textContent = '\u2212';
+  minus.style.opacity = qty <= 0 ? '0.4' : '1';
+  minus.onclick = (e) => { e.stopPropagation(); updatePantryQty(itemName, qty - 1); };
+  const label = document.createElement('span');
+  label.className = 'qty-label';
+  label.textContent = qty > 0 ? qty : '\u2013';
+  const plus = document.createElement('button');
+  plus.className = 'qty-btn';
+  plus.textContent = '+';
+  plus.onclick = (e) => { e.stopPropagation(); updatePantryQty(itemName, qty + 1); };
+  wrap.appendChild(minus); wrap.appendChild(label); wrap.appendChild(plus);
+  return wrap;
+}
+
+async function updatePantryQty(itemName, newQty) {
+  if (newQty <= 0) {
+    delete haveIngredients[itemName];
+    try { await sb.delete('pantry', { family_id: FAMILY_ID, item_name: itemName }); } catch(e) {}
+  } else {
+    haveIngredients[itemName] = { have: true, qty: newQty };
+    try {
+      await sb.upsert('pantry', { family_id: FAMILY_ID, item_name: itemName, have_it: true, notes: String(newQty) }, 'family_id,item_name');
+    } catch(e) {}
+  }
+  persistHaveIngredients();
+  renderGroceryList();
+  const pm = document.getElementById('pantryModal');
+  if (pm && pm.classList.contains('open')) renderPantryItems();
+}
+
 
 function updateConfirmBar() {
   const key = getWeekKey(currentWeekOffset);
@@ -4834,7 +4908,7 @@ async function loadHaveIngredients() {
   haveIngredients = {};
   try {
     const rows = await sb.select('pantry', `family_id=eq.${FAMILY_ID}&have_it=eq.true`);
-    if (rows) { rows.forEach(row => { haveIngredients[row.item_name] = true; }); return; }
+    if (rows) { rows.forEach(row => { haveIngredients[row.item_name] = row.notes ? { have: true, qty: row.notes } : true; }); return; }
   } catch(e) { console.warn('Supabase unavailable for pantry'); }
   try { const raw = localStorage.getItem('mealos-have'); if (raw) haveIngredients = JSON.parse(raw); } catch(e) {}
 }
