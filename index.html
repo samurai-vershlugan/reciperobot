@@ -2016,6 +2016,21 @@
     font-family: var(--font-mono, monospace); font-size: 11px;
     color: var(--accent4, #6B8F5E); min-width: 16px; text-align: center; font-weight: 600;
   }
+
+  .recipe-edit-btn {
+    font-family: var(--font-mono, monospace);
+    font-size: 10px;
+    letter-spacing: 0.5px;
+    padding: 5px 12px;
+    border-radius: 100px;
+    border: 1.5px solid var(--border2);
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    margin-top: 8px;
+    transition: all 0.15s;
+  }
+  .recipe-edit-btn:hover { border-color: var(--accent); color: var(--accent); }
 </style>
 
 <!-- ─── LOGIN SCREEN ─────────────────────────────────────────────────────── -->
@@ -2171,6 +2186,7 @@
     <div class="recipe-modal-header">
       <div id="recipeModalTitle" class="recipe-modal-name"></div>
       <div id="recipeModalTags" class="recipe-modal-tags"></div>
+      <button class="recipe-edit-btn" id="recipeModalEditBtn" onclick="editSavedRecipe()">✎ Edit recipe</button>
     </div>
     <div id="recipeModalProteinBar" style="display:none" class="recipe-modal-protein-bar">
       <span class="recipe-modal-add-label">Protein:</span>
@@ -4101,6 +4117,7 @@ function openRecipeModal(recipeName, fromDayIndex = null) {
   currentRecipeModalDayIndex = fromDayIndex;
   const recipe = getAllRecipes().find(r => r.name === recipeName);
   if (!recipe) return;
+  currentOpenRecipeName = recipeName;
 
   // Default protein to first option if recipe has proteins
   currentRecipeProtein = recipe.proteins ? recipe.proteins[0] : null;
@@ -6075,6 +6092,26 @@ function addDiscoveredRecipe(r) {
 
 let pendingDiscoverRecipe = null;
 
+let currentOpenRecipeName = null;
+
+function editSavedRecipe() {
+  const recipe = getAllRecipes().find(r => r.name === currentOpenRecipeName);
+  if (!recipe) { showToast('Recipe not found'); return; }
+  // Close the view modal
+  document.getElementById('recipeModal').classList.remove('open');
+  // Open the edit modal pre-filled, flagged as an edit of existing
+  const editObj = {
+    name: recipe.name,
+    category: (recipe.tags || []).find(t => CAT_LABELS[t]) || 'other',
+    ingredients: recipe.ingredients || [],
+    steps: recipe.steps || [],
+    url: recipe.url || '',
+    _editingExisting: recipe.name,
+    _isCustom: !!recipe.custom
+  };
+  openDiscoverEditModal(editObj);
+}
+
 function openDiscoverEditModal(r) {
   pendingDiscoverRecipe = r;
 
@@ -6193,6 +6230,21 @@ async function importRecipeFromUrl() {
 function confirmDiscoverEdit() {
   const name = document.getElementById('deRecipeName').value.trim();
   if (!name) { showToast('Please enter a recipe name'); return; }
+
+  // If editing an existing recipe, remove the old version from all categories first
+  if (pendingDiscoverRecipe && pendingDiscoverRecipe._editingExisting) {
+    const oldName = pendingDiscoverRecipe._editingExisting;
+    Object.keys(RECIPES).forEach(function(cat) {
+      RECIPES[cat] = RECIPES[cat].filter(function(rr) { return rr.name !== oldName; });
+    });
+    // Delete old custom recipe from Supabase if it was custom
+    if (pendingDiscoverRecipe._isCustom && FAMILY_ID && AUTH_TOKEN) {
+      fetch(SUPABASE_URL + '/rest/v1/recipes?family_id=eq.' + FAMILY_ID + '&name=eq.' + encodeURIComponent(oldName), {
+        method: 'DELETE',
+        headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + AUTH_TOKEN, 'Prefer': 'return=minimal' }
+      }).catch(function(e) { console.warn('Delete old recipe:', e); });
+    }
+  }
 
   const cat = document.getElementById('deCategory').value;
   const ingredientLines = document.getElementById('deIngredients').value
