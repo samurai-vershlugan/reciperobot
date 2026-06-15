@@ -6019,8 +6019,7 @@ function renderDiscoverResults(recipes) {
       </div>
       <div class="discover-result-actions">
         <a href="https://www.google.com/search?q=${encodeURIComponent(r.name + ' ' + r.source)}" target="_blank" class="discover-action-btn">Find ↗</a>
-        <button class="discover-action-btn" onclick="importDiscoverRecipe(${JSON.stringify(r).replace(/"/g, '&quot;')}, this)">⬇ Import</button>
-        <button class="discover-action-btn primary" onclick="addDiscoveredRecipe(${JSON.stringify(r).replace(/"/g, '&quot;')})">＋ Add</button>
+        <button class="discover-action-btn primary" onclick="importDiscoverRecipe(${JSON.stringify(r).replace(/"/g, '&quot;')}, this)">＋ Add to Library</button>
       </div>
     `;
     el.appendChild(div);
