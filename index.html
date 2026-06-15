@@ -3967,44 +3967,74 @@ function toggleRotationLibrary(forceOpen) {
 
 let recipeSearchProtein = null;
 let recipeSearchCuisine = null;
+let recipeSearchType = null;
 
-const CUISINE_FILTERS = [
-  ['taco','Mexican'], ['mediterranean','Mediterranean'], ['chicken','Chicken'],
-  ['pasta','Pasta'], ['fish','Fish'], ['burger','Burgers'], ['steak','Steak'],
-  ['slowcooker','Slow Cooker'], ['easy','Easy'], ['other','Other']
-];
+// Two clean axes. Cuisine = regional style. Type = dish format / protein.
+const CUISINE_FILTERS = ['Mexican','Mediterranean','American','Asian','Italian'];
+const TYPE_FILTERS = ['Chicken','Beef','Pork','Fish','Shrimp','Pasta','Burger','Salad','Soup','Bowl'];
+
+// Map a recipe to its cuisine(s) using category + tags + name keywords
+function recipeCuisines(r) {
+  const out = new Set();
+  const tags = (r.tags || []).map(t => t.toLowerCase());
+  const name = r.name.toLowerCase();
+  const inCat = (c) => tags.includes(c) || (RECIPES[c] || []).some(x => x.name === r.name);
+  if (inCat('taco') || /taco|burrito|enchilada|fajita|carnitas|quesadilla|salsa/.test(name)) out.add('Mexican');
+  if (inCat('mediterranean') || /shawarma|souvlaki|greek|pita|hummus|falafel|tzatziki|chickpea|mediterranean/.test(name)) out.add('Mediterranean');
+  if (inCat('pasta') || /pasta|spaghetti|rigatoni|alfredo|carbonara|lasagna|gnocchi|risotto|parm/.test(name)) out.add('Italian');
+  if (/ramen|teriyaki|stir.?fry|fried rice|ponzu|miso|soy|sesame|thai|curry|noodle|dumpling/.test(name)) out.add('Asian');
+  if (inCat('burger') || /burger|slider|bbq|mac and cheese|meatloaf|pot roast/.test(name)) out.add('American');
+  return [...out];
+}
+
+// Map a recipe to its type/format using category + ingredients + name
+function recipeTypes(r) {
+  const out = new Set();
+  const tags = (r.tags || []).map(t => t.toLowerCase());
+  const name = r.name.toLowerCase();
+  const inCat = (c) => tags.includes(c) || (RECIPES[c] || []).some(x => x.name === r.name);
+  // Proteins via existing matcher
+  ['Chicken','Beef','Pork','Fish','Shrimp'].forEach(p => {
+    if (recipeUsesProtein(r, p)) out.add(p);
+  });
+  // Dish formats
+  if (inCat('pasta') || /pasta|spaghetti|rigatoni|noodle|alfredo|ramen|mac/.test(name)) out.add('Pasta');
+  if (inCat('burger') || /burger|slider/.test(name)) out.add('Burger');
+  if (/salad/.test(name)) out.add('Salad');
+  if (/soup|stew|chili|broth/.test(name)) out.add('Soup');
+  if (/bowl/.test(name)) out.add('Bowl');
+  return [...out];
+}
 
 function renderRecipeFilters() {
-  // Protein filter row
-  const pEl = document.getElementById('recipeProteinFilters');
-  if (pEl) {
-    pEl.innerHTML = '<span style="font-family:var(--font-mono,monospace);font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);align-self:center;margin-right:4px">Protein:</span>';
-    PROTEIN_FILTERS.forEach(p => {
-      const btn = document.createElement('button');
-      btn.className = 'cat-btn' + (recipeSearchProtein === p.label ? ' active' : '');
-      btn.textContent = p.label;
-      btn.style.cssText = 'font-size:9px;padding:3px 9px';
-      btn.onclick = () => {
-        recipeSearchProtein = recipeSearchProtein === p.label ? null : p.label;
-        renderRecipeFilters(); renderRotationGrid();
-      };
-      pEl.appendChild(btn);
-    });
-  }
-  // Cuisine filter row
   const cEl = document.getElementById('recipeCuisineFilters');
   if (cEl) {
     cEl.innerHTML = '<span style="font-family:var(--font-mono,monospace);font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);align-self:center;margin-right:4px">Cuisine:</span>';
-    CUISINE_FILTERS.forEach(([id, label]) => {
+    CUISINE_FILTERS.forEach(label => {
       const btn = document.createElement('button');
-      btn.className = 'cat-btn' + (recipeSearchCuisine === id ? ' active' : '');
+      btn.className = 'cat-btn' + (recipeSearchCuisine === label ? ' active' : '');
       btn.textContent = label;
       btn.style.cssText = 'font-size:9px;padding:3px 9px';
       btn.onclick = () => {
-        recipeSearchCuisine = recipeSearchCuisine === id ? null : id;
+        recipeSearchCuisine = recipeSearchCuisine === label ? null : label;
         renderRecipeFilters(); renderRotationGrid();
       };
       cEl.appendChild(btn);
+    });
+  }
+  const pEl = document.getElementById('recipeProteinFilters');
+  if (pEl) {
+    pEl.innerHTML = '<span style="font-family:var(--font-mono,monospace);font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);align-self:center;margin-right:4px">Type:</span>';
+    TYPE_FILTERS.forEach(label => {
+      const btn = document.createElement('button');
+      btn.className = 'cat-btn' + (recipeSearchType === label ? ' active' : '');
+      btn.textContent = label;
+      btn.style.cssText = 'font-size:9px;padding:3px 9px';
+      btn.onclick = () => {
+        recipeSearchType = recipeSearchType === label ? null : label;
+        renderRecipeFilters(); renderRotationGrid();
+      };
+      pEl.appendChild(btn);
     });
   }
 }
@@ -4032,15 +4062,10 @@ function renderRotationGrid() {
 
   // Filter by search text
   if (q) all = all.filter(r => r.name.toLowerCase().includes(q));
-  // Filter by protein
-  if (recipeSearchProtein) all = all.filter(r => recipeUsesProtein(r, recipeSearchProtein));
-  // Filter by cuisine/category
-  if (recipeSearchCuisine) {
-    all = all.filter(r =>
-      (r.tags || []).includes(recipeSearchCuisine) ||
-      (RECIPES[recipeSearchCuisine] || []).some(x => x.name === r.name)
-    );
-  }
+  // Filter by cuisine
+  if (recipeSearchCuisine) all = all.filter(r => recipeCuisines(r).includes(recipeSearchCuisine));
+  // Filter by type/protein
+  if (recipeSearchType) all = all.filter(r => recipeTypes(r).includes(recipeSearchType));
 
   all.sort((a,b) => a.name.localeCompare(b.name));
 
