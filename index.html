@@ -3100,7 +3100,7 @@ function renderGroceryList() {
     (pr.ingredients || []).forEach(ing => {
       if (!seen.has(ing.item)) {
         seen.add(ing.item);
-        if (haveIngredients[ing.item]) { checkedIngredients[`${key}-${ing.item}`] = true; return; }
+        if (havePantryItem(ing.item)) { checkedIngredients[`${key}-${ing.item}`] = true; return; }
         const itemKey = `${key}-${ing.item}`;
         const effectiveStore = getEffectiveStore(itemKey, ing);
         (byStore[effectiveStore] || byStore.tj).push({ ...ing, _effectiveStore: effectiveStore });
@@ -3123,7 +3123,7 @@ function renderGroceryList() {
         const itemKey = `${key}-${ing.item}`;
         const effectiveStore = getEffectiveStore(itemKey, ing);
         (byStore[effectiveStore] || byStore.tj).push({ ...ing, _effectiveStore: effectiveStore });
-        if (haveIngredients[ing.item]) checkedIngredients[itemKey] = true;
+        if (havePantryItem(ing.item)) checkedIngredients[itemKey] = true;
       }
     });
   });
@@ -3230,6 +3230,41 @@ async function toggleIngredient(itemKey, el) {
   updateConfirmBar();
 }
 
+function normalizeIngredient(name) {
+  if (!name) return '';
+  let s = name.toLowerCase().trim();
+  // Remove leading quantities and fractions: "1½", "2", "3 tbsp", "½ cup", "2 x 14oz"
+  s = s.replace(/^[\d\s\/¼½¾⅓⅔⅛.,x×-]+/, '');
+  // Remove common units and measurement words
+  s = s.replace(/\b(tsp|teaspoon|teaspoons|tbsp|tablespoon|tablespoons|cup|cups|oz|ounce|ounces|lb|lbs|pound|pounds|g|gram|grams|kg|ml|l|liter|litre|tin|tins|can|cans|clove|cloves|pinch|handful|bunch|sprig|sprigs|slice|slices|stick|sticks|piece|pieces|fillet|fillets)\b/g, '');
+  // Remove prep / descriptor words
+  s = s.replace(/\b(fresh|dried|ground|crushed|minced|chopped|finely|drained|very|well|extra|large|medium|small|skin-on|skin\s*on|bone-in|bone\s*in|boneless|skinless|to serve|to taste|of|the|and|or|x)\b/g, '');
+  // "zest of 1 lemon" / "juice of 1 lemon" -> "lemon"
+  s = s.replace(/\b(zest|juice)\b/g, '');
+  // Strip anything after a comma (prep notes)
+  s = s.split(',')[0];
+  // Strip parentheticals
+  s = s.replace(/\([^)]*\)/g, '');
+  // Collapse whitespace and stray punctuation
+  s = s.replace(/[^a-z\s]/g, ' ').replace(/\s+/g, ' ').trim();
+  return s;
+}
+
+function havePantryItem(itemName) {
+  if (haveIngredients[itemName]) return true; // exact match fast path
+  const norm = normalizeIngredient(itemName);
+  if (!norm) return false;
+  // Check each pantry item normalized
+  for (const k in haveIngredients) {
+    if (!haveIngredients[k]) continue;
+    const pn = normalizeIngredient(k);
+    if (!pn) continue;
+    // Match if either contains the other (handles "paprika" vs "smoked paprika")
+    if (pn === norm || norm.includes(pn) || pn.includes(norm)) return true;
+  }
+  return false;
+}
+
 function pantryQtyOf(itemName) {
   const v = haveIngredients[itemName];
   if (v && typeof v === 'object') return parseInt(v.qty) || 0;
@@ -3309,7 +3344,7 @@ function renderAlexaCommands() {
       if (!ing.item) return;
       const itemKey = `${key}-${ing.item}`;
       // Skip if already checked off in grocery list
-      if (haveIngredients[ing.item] || checkedIngredients[itemKey]) return;
+      if (havePantryItem(ing.item) || checkedIngredients[itemKey]) return;
       if (seen.has(ing.item)) return;
       seen.add(ing.item);
       const store = getEffectiveStore(itemKey, ing);
@@ -3383,7 +3418,7 @@ function confirmPlan() {
   plan.forEach(meal => {
     (meal.ingredients||[]).forEach(ing => {
       const itemKey = `${key}-${ing.item}`;
-      if (!seen.has(ing.item) && !checkedIngredients[itemKey] && !haveIngredients[ing.item]) {
+      if (!seen.has(ing.item) && !checkedIngredients[itemKey] && !havePantryItem(ing.item)) {
         seen.add(ing.item);
         const store = getEffectiveStore(itemKey, ing);
         const list = store === 'wf' ? 'Whole Foods' : store === 'costco' ? 'Costco' : store === 'safeway' ? 'Safeway' : "Trader Joes";
@@ -3434,7 +3469,7 @@ function speakAllCommands() {
     const liveMeal = getAllRecipes().find(r => r.name === meal.name) || meal;
     (liveMeal?.ingredients || []).forEach(ing => {
       const itemKey = `${key}-${ing.item}`;
-      if (!seen.has(ing.item) && !checkedIngredients[itemKey] && !haveIngredients[ing.item]) {
+      if (!seen.has(ing.item) && !checkedIngredients[itemKey] && !havePantryItem(ing.item)) {
         seen.add(ing.item);
         const store = getEffectiveStore(itemKey, ing);
         const list = store === 'wf' ? 'Whole Foods' : store === 'costco' ? 'Costco' : store === 'safeway' ? 'Safeway' : "Trader Joes";
@@ -4095,7 +4130,7 @@ function renderRecipeIngredients(recipe, selectedProtein) {
   }
 
   allIngs.forEach(ing => {
-    const have = !!haveIngredients[ing.item];
+    const have = havePantryItem(ing.item);
     const storeClass = STORE_PILL[ing.store] || 'tj';
     const storeLabel = ing.store === 'costco' ? 'Costco' : ing.store === 'wf' ? 'WF' : ing.store === 'safeway' ? 'Safeway' : "TJ's";
     const row = document.createElement('div');
@@ -4709,7 +4744,7 @@ function buildGroceryByStore(weekKey, plan) {
   getPrepRecipesForWeek(plan).forEach(pr => {
     (pr.ingredients || []).forEach(ing => {
       const itemKey = `${weekKey}-${ing.item}`;
-      if (!seen.has(ing.item) && !checkedIngredients[itemKey] && !haveIngredients[ing.item]) {
+      if (!seen.has(ing.item) && !checkedIngredients[itemKey] && !havePantryItem(ing.item)) {
         seen.add(ing.item);
         const store = getEffectiveStore(itemKey, ing);
         (byStore[store] || byStore.tj).push(ing.item);
@@ -4725,7 +4760,7 @@ function buildGroceryByStore(weekKey, plan) {
     (liveMeal?.ingredients || []).forEach(ing => mealIngs.push(ing));
     mealIngs.forEach(ing => {
       const itemKey = `${weekKey}-${ing.item}`;
-      if (!seen.has(ing.item) && !checkedIngredients[itemKey] && !haveIngredients[ing.item]) {
+      if (!seen.has(ing.item) && !checkedIngredients[itemKey] && !havePantryItem(ing.item)) {
         seen.add(ing.item);
         const store = getEffectiveStore(itemKey, ing);
         (byStore[store] || byStore.tj).push(ing.item);
@@ -5252,7 +5287,7 @@ function sharePlan() {
     const liveMeal = getAllRecipes().find(r => r.name === meal.name) || meal;
     (liveMeal?.ingredients || []).forEach(ing => {
       const itemKey = `${key}-${ing.item}`;
-      if (!seen.has(ing.item) && !checkedIngredients[itemKey] && !haveIngredients[ing.item]) {
+      if (!seen.has(ing.item) && !checkedIngredients[itemKey] && !havePantryItem(ing.item)) {
         seen.add(ing.item);
         const store = getEffectiveStore(itemKey, ing);
         (byStore[store] || byStore.tj).push(ing.item);
