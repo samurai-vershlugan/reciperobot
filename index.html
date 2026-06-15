@@ -6312,11 +6312,10 @@ function confirmDiscoverEdit() {
         family_id: FAMILY_ID,
         name,
         category: cat,
-        tags: recipe.tags,
-        ingredients,
-        steps: stepLines,
-        url: url || null,
-        custom: true
+        tags_json: recipe.tags,
+        ingredients_json: ingredients,
+        steps_json: stepLines,
+        url: url || null
       })
     }).catch(e => console.warn('Save recipe error:', e));
   }
