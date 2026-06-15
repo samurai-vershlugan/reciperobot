@@ -6199,10 +6199,10 @@ function openDiscoverEditModal(r) {
         <textarea id="deIngredients" style="width:100%;box-sizing:border-box;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'DM Mono',monospace;font-size:11px;padding:10px;min-height:160px;resize:vertical;outline:none;margin-bottom:10px"></textarea>
         <label class="input-label">Steps <span style="opacity:0.5;font-size:9px">(one per line)</span></label>
         <textarea id="deSteps" style="width:100%;box-sizing:border-box;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:12px;padding:10px;min-height:120px;resize:vertical;outline:none;margin-bottom:10px"></textarea>
-        <label class="input-label">Source URL <span style="opacity:0.5;font-size:9px">(paste and import)</span></label>
+        <label class="input-label">Source URL</label>
         <div style="display:flex;gap:8px;margin-bottom:16px">
-          <input id="deUrl" class="text-input" type="text" placeholder="https://..." style="margin-bottom:0;flex:1" />
-          <button class="confirm-btn" id="deImportBtn" onclick="importRecipeFromUrl()" style="flex:0 0 auto;padding:8px 14px;white-space:nowrap">Import ↓</button>
+          <input id="deUrl" class="text-input" type="text" placeholder="https://..." style="margin-bottom:0;flex:1" oninput="onDeUrlChange()" />
+          <button class="confirm-btn" id="deImportBtn" onclick="importRecipeFromUrl()" style="flex:0 0 auto;padding:8px 14px;white-space:nowrap;display:none">Import from URL</button>
         </div>
         <div style="display:flex;gap:8px;justify-content:flex-end">
           <button class="confirm-btn" style="background:#333;color:#ccc" onclick="closeDiscoverEditModal()">Cancel</button>
@@ -6221,6 +6221,9 @@ function openDiscoverEditModal(r) {
     .join('\n');
   document.getElementById('deSteps').value = (r.steps || []).join('\n');
   document.getElementById('deUrl').value = r.url || '';
+  deOriginalUrl = r.url || '';
+  var _imp = document.getElementById('deImportBtn');
+  if (_imp) _imp.style.display = 'none';
 
   modal.classList.add('open');
 }
