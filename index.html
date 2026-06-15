@@ -6231,6 +6231,14 @@ function closeDiscoverEditModal() {
   pendingDiscoverRecipe = null;
 }
 
+let deOriginalUrl = '';
+
+function onDeUrlChange() {
+  const current = document.getElementById('deUrl').value.trim();
+  const btn = document.getElementById('deImportBtn');
+  if (btn) btn.style.display = (current && current !== deOriginalUrl) ? 'block' : 'none';
+}
+
 async function importRecipeFromUrl() {
   const url = document.getElementById('deUrl').value.trim();
   if (!url) { showToast('Paste a recipe URL first'); return; }
