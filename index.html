@@ -4895,8 +4895,16 @@ async function loadCustomRecipes() {
         const cat = row.category || 'other';
         if (!RECIPES[cat]) RECIPES[cat] = [];
         if (!RECIPES[cat].find(r => r.name === row.name)) {
-          RECIPES[cat].push({ name: row.name, tags: row.tags_json || [cat,'custom'],
-            shop: null, ingredients: row.ingredients_json || [], custom: true, sbId: row.id });
+          RECIPES[cat].push({
+            name: row.name,
+            tags: row.tags || row.tags_json || [cat,'custom'],
+            shop: null,
+            ingredients: row.ingredients || row.ingredients_json || [],
+            steps: row.steps || row.steps_json || undefined,
+            url: row.url || null,
+            custom: true,
+            sbId: row.id
+          });
           customRecipes.push({ name: row.name, cat, sbId: row.id });
         }
       });
