@@ -6016,7 +6016,13 @@ Tags must be from: quick, gluten-free, kid-friendly, meal-prep, vegetarian, dair
     console.log('Discover response body:', rawText);
 
     if (!response.ok) throw new Error(`Edge function error ${response.status}: ${rawText}`);
+    if (!rawText || !rawText.trim()) {
+      throw new Error('The recipe service returned an empty response. The Edge Function may have crashed — check that ANTHROPIC_API_KEY is set and the model string is valid.');
+    }
     const data = JSON.parse(rawText);
+    if (data.error) {
+      throw new Error('Service error: ' + (typeof data.error === 'string' ? data.error : JSON.stringify(data.error)));
+    }
     const text = data.content?.[0]?.text || '';
     console.log('Claude text:', text);
     const clean = text.replace(/```json|```/g, '').trim();
