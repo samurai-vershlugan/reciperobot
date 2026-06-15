@@ -6101,7 +6101,14 @@ function renderDiscoverResults(recipes) {
   });
 }
 
+let importInProgress = false;
+
 async function importDiscoverRecipe(r, btnEl) {
+  if (importInProgress) {
+    showToast('Hang on — finishing the current import first');
+    return;
+  }
+  importInProgress = true;
   const origText = btnEl.textContent;
   btnEl.textContent = 'Working...';
   btnEl.disabled = true;
@@ -6140,6 +6147,7 @@ async function importDiscoverRecipe(r, btnEl) {
   } finally {
     btnEl.textContent = origText;
     btnEl.disabled = false;
+    importInProgress = false;
   }
 }
 
