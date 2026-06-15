@@ -3952,13 +3952,61 @@ function getMealDisplayName(meal) {
 }
 
 function toggleRotationLibrary(forceOpen) {
-  const grid = document.getElementById('rotationGrid');
+  const browser = document.getElementById('recipeBrowser');
   const btn = document.getElementById('rotationToggle');
-  const isOpen = grid.style.display !== 'none';
+  const isOpen = browser.style.display !== 'none';
   const shouldOpen = forceOpen !== undefined ? forceOpen : !isOpen;
-  grid.style.display = shouldOpen ? '' : 'none';
+  browser.style.display = shouldOpen ? '' : 'none';
   btn.classList.toggle('open', shouldOpen);
   document.getElementById('rotationToggleIcon').textContent = shouldOpen ? '▴' : '▾';
+  if (shouldOpen) {
+    renderRecipeFilters();
+    renderRotationGrid();
+  }
+}
+
+let recipeSearchProtein = null;
+let recipeSearchCuisine = null;
+
+const CUISINE_FILTERS = [
+  ['taco','Mexican'], ['mediterranean','Mediterranean'], ['chicken','Chicken'],
+  ['pasta','Pasta'], ['fish','Fish'], ['burger','Burgers'], ['steak','Steak'],
+  ['slowcooker','Slow Cooker'], ['easy','Easy'], ['other','Other']
+];
+
+function renderRecipeFilters() {
+  // Protein filter row
+  const pEl = document.getElementById('recipeProteinFilters');
+  if (pEl) {
+    pEl.innerHTML = '<span style="font-family:var(--font-mono,monospace);font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);align-self:center;margin-right:4px">Protein:</span>';
+    PROTEIN_FILTERS.forEach(p => {
+      const btn = document.createElement('button');
+      btn.className = 'cat-btn' + (recipeSearchProtein === p.label ? ' active' : '');
+      btn.textContent = p.label;
+      btn.style.cssText = 'font-size:9px;padding:3px 9px';
+      btn.onclick = () => {
+        recipeSearchProtein = recipeSearchProtein === p.label ? null : p.label;
+        renderRecipeFilters(); renderRotationGrid();
+      };
+      pEl.appendChild(btn);
+    });
+  }
+  // Cuisine filter row
+  const cEl = document.getElementById('recipeCuisineFilters');
+  if (cEl) {
+    cEl.innerHTML = '<span style="font-family:var(--font-mono,monospace);font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);align-self:center;margin-right:4px">Cuisine:</span>';
+    CUISINE_FILTERS.forEach(([id, label]) => {
+      const btn = document.createElement('button');
+      btn.className = 'cat-btn' + (recipeSearchCuisine === id ? ' active' : '');
+      btn.textContent = label;
+      btn.style.cssText = 'font-size:9px;padding:3px 9px';
+      btn.onclick = () => {
+        recipeSearchCuisine = recipeSearchCuisine === id ? null : id;
+        renderRecipeFilters(); renderRotationGrid();
+      };
+      cEl.appendChild(btn);
+    });
+  }
 }
 
 function allDaysLocked() {
@@ -3968,70 +4016,77 @@ function allDaysLocked() {
 
 function renderRotationGrid() {
   const el = document.getElementById('rotationGrid');
-  const cats = Object.keys(CAT_LABELS).sort((a,b) => CAT_LABELS[a].localeCompare(CAT_LABELS[b]));
-  el.innerHTML = '';
+  if (!el) return;
+  const searchEl = document.getElementById('recipeSearchInput');
+  const q = searchEl ? searchEl.value.trim().toLowerCase() : '';
 
-  cats.forEach(cat => {
-    if (cat === 'prep') return; // prep recipes not shown in rotation library
-
-    // Primary recipes from this category's array
-    const primary = (RECIPES[cat] || []).slice();
-
-    // Also find recipes from OTHER categories that have this category as a tag
-    const secondary = [];
-    Object.entries(RECIPES).forEach(([otherCat, recipes]) => {
-      if (otherCat === cat || otherCat === 'prep') return;
-      recipes.forEach(r => {
-        if ((r.tags || []).includes(cat) && !primary.some(p => p.name === r.name)) {
-          secondary.push(r);
-        }
-      });
+  // Gather all unique recipes (dedup by name)
+  const seen = new Set();
+  let all = [];
+  Object.entries(RECIPES).forEach(([cat, recipes]) => {
+    if (cat === 'prep') return;
+    recipes.forEach(r => {
+      if (!seen.has(r.name)) { seen.add(r.name); all.push(r); }
     });
-
-    const allRecipes = [...primary, ...secondary].sort((a,b) => a.name.localeCompare(b.name));
-    if (!allRecipes.length) return;
-
-    const section = document.createElement('div');
-    section.className = 'rot-category';
-    section.innerHTML = `<div class="rot-cat-label">${CAT_LABELS[cat]}</div>`;
-
-    const items = document.createElement('div');
-    items.className = 'rot-items';
-
-    allRecipes.forEach(r => {
-      const row = document.createElement('div');
-      row.className = `rotation-item${r.custom ? ' rotation-item-custom' : ''}`;
-
-      const nameSpan = document.createElement('span');
-      nameSpan.textContent = r.name;
-      if (r.proteins && r.proteins.length) {
-        const hint = document.createElement('span');
-        hint.style.cssText = 'font-family:"DM Mono",monospace;font-size:9px;color:var(--text-muted);margin-left:5px;opacity:0.6;';
-        hint.textContent = r.proteins.map(p => p.label).join(' / ');
-        nameSpan.appendChild(hint);
-      }
-      nameSpan.addEventListener('click', () => openRecipeModal(r.name));
-      row.appendChild(nameSpan);
-
-      if (r.custom) {
-        const del = document.createElement('button');
-        del.className = 'rot-delete-btn';
-        del.title = 'Remove';
-        del.textContent = '✕';
-        del.addEventListener('click', (e) => {
-          e.stopPropagation();
-          deleteRecipeFromLibrary(r.name, r.tags.find(t => t !== 'custom') || 'other');
-        });
-        row.appendChild(del);
-      }
-
-      items.appendChild(row);
-    });
-
-    section.appendChild(items);
-    el.appendChild(section);
   });
+
+  // Filter by search text
+  if (q) all = all.filter(r => r.name.toLowerCase().includes(q));
+  // Filter by protein
+  if (recipeSearchProtein) all = all.filter(r => recipeUsesProtein(r, recipeSearchProtein));
+  // Filter by cuisine/category
+  if (recipeSearchCuisine) {
+    all = all.filter(r =>
+      (r.tags || []).includes(recipeSearchCuisine) ||
+      (RECIPES[recipeSearchCuisine] || []).some(x => x.name === r.name)
+    );
+  }
+
+  all.sort((a,b) => a.name.localeCompare(b.name));
+
+  el.innerHTML = '';
+  if (!all.length) {
+    el.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:16px 4px">No recipes match. Try clearing a filter.</div>';
+    return;
+  }
+
+  // Result count
+  const count = document.createElement('div');
+  count.style.cssText = 'font-family:var(--font-mono,monospace);font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px';
+  count.textContent = all.length + ' recipe' + (all.length !== 1 ? 's' : '');
+  el.appendChild(count);
+
+  const items = document.createElement('div');
+  items.className = 'rot-items';
+  all.forEach(r => {
+    const row = document.createElement('div');
+    row.className = `rotation-item${r.custom ? ' rotation-item-custom' : ''}`;
+    const nameSpan = document.createElement('span');
+    nameSpan.textContent = r.name;
+    if (r.proteins && r.proteins.length) {
+      const hint = document.createElement('span');
+      hint.style.cssText = 'font-family:"DM Mono",monospace;font-size:9px;color:var(--text-muted);margin-left:5px;opacity:0.6;';
+      hint.textContent = r.proteins.map(p => p.label).join(' / ');
+      nameSpan.appendChild(hint);
+    }
+    nameSpan.addEventListener('click', () => openRecipeModal(r.name));
+    row.appendChild(nameSpan);
+    if (r.custom) {
+      const del = document.createElement('button');
+      del.className = 'rot-delete-btn';
+      del.title = 'Remove';
+      del.textContent = '✕';
+      del.addEventListener('click', (e) => {
+        e.stopPropagation();
+        deleteRecipeFromLibrary(r.name, (r.tags||[]).find(t => t !== 'custom') || 'other');
+      });
+      row.appendChild(del);
+    }
+    items.appendChild(row);
+  });
+  el.appendChild(items);
 }
+
 
 // ─── WEEK NAV ─────────────────────────────────────────────────────────────────
 
