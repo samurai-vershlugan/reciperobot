@@ -6097,7 +6097,7 @@ function renderDiscoverResults(recipes) {
 
 async function importDiscoverRecipe(r, btnEl) {
   const origText = btnEl.textContent;
-  btnEl.textContent = 'Finding...';
+  btnEl.textContent = 'Working...';
   btnEl.disabled = true;
 
   try {
@@ -6238,7 +6238,7 @@ async function importRecipeFromUrl() {
 
   const btn = document.getElementById('deImportBtn');
   const origText = btn.textContent;
-  btn.textContent = 'Importing...';
+  btn.textContent = 'Working...';
   btn.disabled = true;
 
   try {
