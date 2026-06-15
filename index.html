@@ -6020,7 +6020,14 @@ Tags must be from: quick, gluten-free, kid-friendly, meal-prep, vegetarian, dair
     const text = data.content?.[0]?.text || '';
     console.log('Claude text:', text);
     const clean = text.replace(/```json|```/g, '').trim();
-    const recipes = JSON.parse(clean);
+    let recipes;
+    try {
+      recipes = JSON.parse(clean);
+    } catch(parseErr) {
+      // Salvage: response may be truncated — recover complete objects from the array
+      recipes = salvageRecipeArray(clean);
+      if (!recipes.length) throw parseErr;
+    }
     renderDiscoverResults(recipes);
   } catch(e) {
     console.error('Discover error:', e);
@@ -6033,6 +6040,28 @@ Tags must be from: quick, gluten-free, kid-friendly, meal-prep, vegetarian, dair
   } finally {
     btn.disabled = false;
   }
+}
+
+function salvageRecipeArray(text) {
+  // Recover complete {...} objects from a possibly-truncated JSON array
+  const recipes = [];
+  let depth = 0, start = -1, inStr = false, esc = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (esc) { esc = false; continue; }
+    if (ch === '\\') { esc = true; continue; }
+    if (ch === '"') inStr = !inStr;
+    if (inStr) continue;
+    if (ch === '{') { if (depth === 0) start = i; depth++; }
+    else if (ch === '}') {
+      depth--;
+      if (depth === 0 && start >= 0) {
+        try { recipes.push(JSON.parse(text.slice(start, i + 1))); } catch(e) {}
+        start = -1;
+      }
+    }
+  }
+  return recipes;
 }
 
 function renderDiscoverResults(recipes) {
