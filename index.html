@@ -4115,9 +4115,24 @@ let currentRecipeModalDayIndex = null; // which day card opened the modal
 
 function openRecipeModal(recipeName, fromDayIndex = null) {
   currentRecipeModalDayIndex = fromDayIndex;
-  const recipe = getAllRecipes().find(r => r.name === recipeName);
-  if (!recipe) return;
-  currentOpenRecipeName = recipeName;
+  const all = getAllRecipes();
+  // Exact match first, then trimmed/case-insensitive fallback
+  let recipe = all.find(r => r.name === recipeName);
+  if (!recipe && recipeName) {
+    const norm = recipeName.trim().toLowerCase();
+    recipe = all.find(r => r.name.trim().toLowerCase() === norm);
+  }
+  if (!recipe && recipeName) {
+    // Strip protein suffix like " (Chicken)" and retry
+    const base = recipeName.replace(/\s*\([^)]*\)\s*$/, '').trim().toLowerCase();
+    recipe = all.find(r => r.name.replace(/\s*\([^)]*\)\s*$/, '').trim().toLowerCase() === base);
+  }
+  if (!recipe) {
+    console.warn('Recipe not found:', recipeName, '— available:', all.map(r => r.name));
+    showToast('Recipe details not found');
+    return;
+  }
+  currentOpenRecipeName = recipe.name;
 
   // Default protein to first option if recipe has proteins
   currentRecipeProtein = recipe.proteins ? recipe.proteins[0] : null;
