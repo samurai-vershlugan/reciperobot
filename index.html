@@ -6018,12 +6018,55 @@ function renderDiscoverResults(recipes) {
         }).join('')}
       </div>
       <div class="discover-result-actions">
-        <a href="https://www.google.com/search?q=${encodeURIComponent(r.name + ' ' + r.source)}" target="_blank" class="discover-action-btn">Find Recipe ↗</a>
-        <button class="discover-action-btn primary" onclick="addDiscoveredRecipe(${JSON.stringify(r).replace(/"/g, '&quot;')})">＋ Add to Library</button>
+        <a href="https://www.google.com/search?q=${encodeURIComponent(r.name + ' ' + r.source)}" target="_blank" class="discover-action-btn">Find ↗</a>
+        <button class="discover-action-btn" onclick="importDiscoverRecipe(${JSON.stringify(r).replace(/"/g, '&quot;')}, this)">⬇ Import</button>
+        <button class="discover-action-btn primary" onclick="addDiscoveredRecipe(${JSON.stringify(r).replace(/"/g, '&quot;')})">＋ Add</button>
       </div>
     `;
     el.appendChild(div);
   });
+}
+
+async function importDiscoverRecipe(r, btnEl) {
+  const origText = btnEl.textContent;
+  btnEl.textContent = 'Finding...';
+  btnEl.disabled = true;
+
+  try {
+    // Ask edge function to find URL by name + parse it
+    const resp = await fetch(SUPABASE_URL + '/functions/v1/import-recipe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + AUTH_TOKEN },
+      body: JSON.stringify({ recipeName: r.name + ' ' + (r.source || '') })
+    });
+    const data = await resp.json();
+
+    if (data.error && !data.ingredients) {
+      showToast(data.error + ' — opening manual editor');
+      // Fall back to the manual edit modal with what we have
+      openDiscoverEditModal(r);
+      btnEl.textContent = origText;
+      btnEl.disabled = false;
+      return;
+    }
+
+    // Merge parsed data into the recipe object, then open edit modal pre-filled
+    const enriched = Object.assign({}, r, {
+      name: data.name || r.name,
+      ingredients: (data.ingredients || []).map(function(i) { return { item: i, store: 'tj' }; }),
+      steps: data.steps || [],
+      url: data.foundUrl || r.url || ''
+    });
+    openDiscoverEditModal(enriched);
+    showToast('Imported ' + (data.ingredients ? data.ingredients.length : 0) + ' ingredients — review & save');
+  } catch(e) {
+    console.error('Import error:', e);
+    showToast('Import failed — opening manual editor');
+    openDiscoverEditModal(r);
+  } finally {
+    btnEl.textContent = origText;
+    btnEl.disabled = false;
+  }
 }
 
 function addDiscoveredRecipe(r) {
