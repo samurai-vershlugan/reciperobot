@@ -2129,7 +2129,12 @@
       </button>
       <button class="add-library-btn" onclick="openAddLibraryModal()">＋ Add to Library</button>
     </div>
-    <div class="rotation-grid" id="rotationGrid" style="display:none"></div>
+    <div id="recipeBrowser" style="display:none">
+      <input id="recipeSearchInput" class="text-input" type="text" placeholder="Search recipes..." style="width:100%;box-sizing:border-box;margin-bottom:8px" oninput="renderRotationGrid()" />
+      <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px" id="recipeCuisineFilters"></div>
+      <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px" id="recipeProteinFilters"></div>
+      <div class="rotation-grid" id="rotationGrid"></div>
+    </div>
   </div>
 
   <div class="sidebar">
