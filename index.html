@@ -4786,6 +4786,23 @@ async function signOut() {
   document.getElementById('loginOTP').value = '';
 }
 
+async function ensureFreshToken() {
+  try {
+    const raw = localStorage.getItem('mealos-session');
+    if (!raw) return;
+    const session = JSON.parse(raw);
+    if (!session) return;
+    // Refresh if within 60s of expiry or already expired
+    if (Date.now() >= session.expires_at - 60000) {
+      const fresh = await refreshSessionIfNeeded(session);
+      if (fresh) {
+        AUTH_TOKEN = fresh.access_token;
+        currentUser = fresh.user;
+      }
+    }
+  } catch(e) { console.warn('Token refresh check failed:', e); }
+}
+
 async function refreshSessionIfNeeded(session) {
   if (!session) return null;
   if (Date.now() < session.expires_at - 60000) return session; // still valid
@@ -6698,6 +6715,7 @@ async function importRecipeFromUrl() {
 async function confirmDiscoverEdit() {
   const name = document.getElementById('deRecipeName').value.trim();
   if (!name) { showToast('Please enter a recipe name'); return; }
+  await ensureFreshToken();
 
   // If editing an existing recipe, remove the old version from all categories first
   if (pendingDiscoverRecipe && pendingDiscoverRecipe._editingExisting) {
