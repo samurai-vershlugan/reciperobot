@@ -6045,8 +6045,10 @@ function openRobotDayPicker(recipeName) {
 let discoverMood = 'comfort';
 let discoverProtein = null;
 let discoverCuisine = null;
+let discoverSimilarTo = null;
 
 function openDiscoverModal() {
+  discoverSimilarTo = null;
   document.getElementById('discoverResults').innerHTML = '';
   document.getElementById('discoverModal').classList.add('open');
   // Wire mood buttons
@@ -6112,17 +6114,34 @@ function buildLibraryNames() {
 
 
 function discoverSimilarFromEditor() {
-  // Capture current classification from the editor
-  const cuisine = deCuisineSel.length ? deCuisineSel[0] : null;
-  let proteinFocus = null;
-  const proteinMap = { 'Chicken':'chicken','Beef':'beef','Pork':'pork','Fish':'salmon','Shrimp':'shrimp' };
-  for (var i=0;i<deTypeSel.length;i++) { if (proteinMap[deTypeSel[i]]) { proteinFocus = proteinMap[deTypeSel[i]]; break; } }
+  // Build a reference recipe object from the editor state to derive classification
+  const refName = document.getElementById('deRecipeName').value.trim();
+  const refIngLines = document.getElementById('deIngredients').value.split('\n').map(function(l){return l.trim();}).filter(Boolean);
+  const refRecipe = {
+    name: refName,
+    tags: [],
+    ingredients: refIngLines.map(function(l){ return { item: l.split(',')[0] }; }),
+    cuisine: deCuisineSel.slice(),
+    type: deTypeSel.slice(),
+    proteins: deProteins.slice()
+  };
 
-  // Close editor, open Discover
+  // Derive cuisine (override or auto) and a specific protein
+  const cuisines = recipeCuisines(refRecipe);
+  const types = recipeTypes(refRecipe);
+  const cuisine = cuisines.length ? cuisines[0] : null;
+
+  const proteinMap = { 'Chicken':'chicken','Beef':'beef','Pork':'pork','Fish':'salmon','Shrimp':'shrimp','Turkey':'turkey' };
+  let proteinFocus = null;
+  for (var i=0;i<types.length;i++) { if (proteinMap[types[i]]) { proteinFocus = proteinMap[types[i]]; break; } }
+
+  // Build a focused "similar" instruction using the recipe name itself
+  discoverSimilarTo = refName || null;
+
   closeDiscoverEditModal();
   openDiscoverModal();
 
-  // Apply filters
+  discoverMood = 'new';
   if (cuisine) {
     discoverCuisine = cuisine;
     document.querySelectorAll('#discoverCuisineBtns .cat-btn').forEach(function(b){
@@ -6135,8 +6154,7 @@ function discoverSimilarFromEditor() {
       b.classList.toggle('active', b.dataset.protein === proteinFocus);
     });
   }
-  showToast('Finding recipes like this one...');
-  // Auto-run discovery
+  showToast('Finding recipes like ' + (refName || 'this one') + '...');
   setTimeout(function(){ runDiscover(); }, 300);
 }
 
@@ -6197,6 +6215,7 @@ ${usedMeals.length ? usedMeals.join(', ') : 'Just getting started'}
 They're looking for: ${moodDescriptions[discoverMood] || 'a good variety'}.${seasonalNote}
 ${discoverProtein ? `Protein focus: All 5 recipes MUST feature ${discoverProtein} as the main protein.` : ''}
 ${discoverCuisine ? `Cuisine focus: All 5 recipes MUST be ${discoverCuisine} cuisine.` : ''}
+${discoverSimilarTo ? `Find recipes SIMILAR TO "${discoverSimilarTo}" — same style, key ingredients, and vibe, but different enough to be worth trying as alternatives.` : ''}
 
 Recommend exactly 5 specific recipes they would love but haven't tried. For each recipe use ONLY these trusted sources: NYT Cooking, Serious Eats, Smitten Kitchen, Half Baked Harvest, The Kitchn, Budget Bytes, Bon Appétit, Food52.
 
