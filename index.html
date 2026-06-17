@@ -2826,6 +2826,7 @@ function getMondayOfWeek(offset) {
 let weekPlans = {}; // keyed by weekOffset
 let checkedIngredients = {};
 let extraGroceryItems = {}; // { weekKey: [ {item, store} ] }
+try { const _ex = localStorage.getItem('mealos-extras'); if (_ex) extraGroceryItems = JSON.parse(_ex); } catch(e) {}
 let swapTarget = null;
 let lockedDays = {}; // keyed by "weekKey-dayIndex"
 
