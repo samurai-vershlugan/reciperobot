@@ -3050,7 +3050,6 @@ function renderWeek() {
           </div>
         </div>
         <div class="day-meal">
-          ${getMealCategory(meal.name) ? `<div class="meal-category-badge">${CAT_LABELS[getMealCategory(meal.name)] || ''}</div>` : ''}
           <div class="meal-name meal-name-tappable">${getMealDisplayName(meal)}</div>
           <div class="meal-actions">
             <button class="action-btn btn-swap" onclick="openSwapModal(${i})">⇄ Swap</button>
