@@ -2032,6 +2032,14 @@
     transition: all 0.15s;
   }
   .recipe-edit-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  .ing-amount {
+    font-family: var(--font-mono, 'DM Mono', monospace);
+    font-size: 9px;
+    color: var(--text-muted);
+    margin-left: 6px;
+    opacity: 0.7;
+  }
 </style>
 
 <!-- ─── LOGIN SCREEN ─────────────────────────────────────────────────────── -->
@@ -3181,12 +3189,19 @@ function renderGroceryList() {
       cbDiv.className = 'ingredient-cb';
       cbDiv.textContent = checked ? '✓' : '';
       div.appendChild(cbDiv);
+      const parts = ing.name ? { amount: ing.amount || '', name: ing.name } : parseIngredientParts(ing.item);
       const nameSpan = document.createElement('span');
       nameSpan.className = 'ing-name';
-      nameSpan.textContent = ing.item;
+      nameSpan.textContent = parts.name;
+      if (parts.amount) {
+        const amt = document.createElement('span');
+        amt.className = 'ing-amount';
+        amt.textContent = parts.amount;
+        nameSpan.appendChild(amt);
+      }
       div.appendChild(nameSpan);
-      if (haveIngredients[ing.item]) {
-        div.appendChild(makePantryQtyStepper(ing.item));
+      if (havePantryItem(ing.item)) {
+        div.appendChild(makePantryQtyStepper(parts.name.toLowerCase()));
       }
       const sel = document.createElement('select');
       sel.className = `store-select store-select-${sk}${isOverridden ? ' overridden' : ''}`;
