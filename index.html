@@ -2048,6 +2048,9 @@
   }
   .ingredient-item:hover .ing-edit-btn { opacity: 0.5; }
   .ing-edit-btn:hover { opacity: 1 !important; color: var(--accent); }
+
+  .ing-name-editable { cursor: pointer; }
+  .ing-name-editable:hover { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
 </style>
 
 <!-- ─── LOGIN SCREEN ─────────────────────────────────────────────────────── -->
@@ -3232,34 +3235,33 @@ function renderGroceryList() {
       const itemKey = `${key}-${ing.item}`;
       const checked = checkedIngredients[itemKey] ? 'checked' : '';
       const isOverridden = !!storeOverrides[itemKey];
+      const parts = ing.name ? { amount: ing.amount || '', name: ing.name } : parseIngredientParts(ing.item);
       const div = document.createElement('div');
       div.className = `ingredient-item ${checked}`;
-      div.onclick = () => toggleIngredient(itemKey, div, ing.item);
+
+      // Checkbox toggles checked state
       const cbDiv = document.createElement('div');
       cbDiv.className = 'ingredient-cb';
       cbDiv.textContent = checked ? '✓' : '';
+      cbDiv.onclick = (e) => { e.stopPropagation(); toggleIngredient(itemKey, div, ing.item); };
       div.appendChild(cbDiv);
-      const parts = ing.name ? { amount: ing.amount || '', name: ing.name } : parseIngredientParts(ing.item);
+
+      // Name — click to rename
       const nameSpan = document.createElement('span');
-      nameSpan.className = 'ing-name';
+      nameSpan.className = 'ing-name ing-name-editable';
       nameSpan.textContent = parts.name;
+      nameSpan.title = 'Click to rename';
       if (parts.amount) {
         const amt = document.createElement('span');
         amt.className = 'ing-amount';
         amt.textContent = parts.amount;
         nameSpan.appendChild(amt);
       }
+      nameSpan.onclick = (e) => { e.stopPropagation(); renameGroceryItem(ing, parts.name); };
       div.appendChild(nameSpan);
-      // Tap-to-edit pencil
-      const editBtn = document.createElement('button');
-      editBtn.className = 'ing-edit-btn';
-      editBtn.textContent = '✎';
-      editBtn.title = 'Rename this item';
-      editBtn.onclick = (e) => { e.stopPropagation(); renameGroceryItem(ing, parts.name); };
-      div.appendChild(editBtn);
-      if (havePantryItem(ing.item)) {
-        div.appendChild(makePantryQtyStepper(parts.name.toLowerCase()));
-      }
+
+      // Quantity stepper on EVERY item for consistency
+      div.appendChild(makePantryQtyStepper(parts.name.toLowerCase()));
       const sel = document.createElement('select');
       sel.className = `store-select store-select-${sk}${isOverridden ? ' overridden' : ''}`;
       sel.onclick = (e) => e.stopPropagation();
