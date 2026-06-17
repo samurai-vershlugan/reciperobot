@@ -6578,11 +6578,11 @@ function openDiscoverEditModal(r) {
           <input id="deUrl" class="text-input" type="text" placeholder="https://..." style="margin-bottom:0;flex:1" oninput="onDeUrlChange()" />
           <button class="confirm-btn" id="deImportBtn" onclick="importRecipeFromUrl()" style="flex:0 0 auto;padding:8px 14px;white-space:nowrap;display:none">Import from URL</button>
         </div>
-        <div style="display:flex;gap:8px;justify-content:space-between;align-items:center">
-          <button class="confirm-btn" style="background:transparent;border:1.5px solid var(--accent2);color:var(--accent2)" onclick="discoverSimilarFromEditor()">✦ Find similar</button>
+        <div style="display:flex;gap:8px;justify-content:space-between;align-items:center;flex-wrap:wrap">
+          <button class="confirm-btn" style="background:transparent;border:1.5px solid var(--accent2);color:var(--accent2);white-space:nowrap" onclick="discoverSimilarFromEditor()">✦ Discover similar</button>
           <div style="display:flex;gap:8px">
             <button class="confirm-btn" style="background:#333;color:#ccc" onclick="closeDiscoverEditModal()">Cancel</button>
-            <button class="confirm-btn" onclick="confirmDiscoverEdit()">Save to Library ✓</button>
+            <button class="confirm-btn" style="white-space:nowrap" onclick="confirmDiscoverEdit()">Save to Library</button>
           </div>
         </div>
       </div>
