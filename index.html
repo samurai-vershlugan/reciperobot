@@ -2332,13 +2332,13 @@
     <div id="discoverFilters" style="margin-bottom:16px">
       <div class="swap-tag-label" style="margin-bottom:8px">What are you looking for?</div>
       <div style="display:flex;flex-wrap:wrap;gap:6px" id="discoverMoodBtns">
-        <button class="cat-btn active" data-mood="surprise">Surprise me</button>
-        <button class="cat-btn" data-mood="quick">Quick weeknights</button>
-        <button class="cat-btn" data-mood="weekend">Weekend project</button>
-        <button class="cat-btn" data-mood="healthy">Healthy & light</button>
-        <button class="cat-btn" data-mood="comfort">Comfort food</button>
-        <button class="cat-btn" data-mood="mediterranean">More Mediterranean</button>
-        <button class="cat-btn" data-mood="new">Something totally new</button>
+        <button class="cat-btn active" data-mood="comfort">Comfort Food</button>
+        <button class="cat-btn" data-mood="healthy">Healthy &amp; Light</button>
+        <button class="cat-btn" data-mood="kid">Kid Friendly</button>
+        <button class="cat-btn" data-mood="new">New &amp; Exciting</button>
+        <button class="cat-btn" data-mood="quick">Quick &amp; Easy</button>
+        <button class="cat-btn" data-mood="seasonal">Seasonal</button>
+        <button class="cat-btn" data-mood="weekend">Weekend Project</button>
       </div>
       <div class="swap-tag-label" style="margin-bottom:8px;margin-top:12px">Focus on a protein <span style="opacity:0.5">(optional)</span></div>
       <div style="display:flex;flex-wrap:wrap;gap:6px" id="discoverProteinBtns">
@@ -2350,6 +2350,14 @@
         <button class="cat-btn" data-protein="shrimp">Shrimp</button>
         <button class="cat-btn" data-protein="turkey">Turkey</button>
         <button class="cat-btn" data-protein="vegetarian">Vegetarian</button>
+      </div>
+      <div class="swap-tag-label" style="margin-bottom:8px;margin-top:12px">Cuisine <span style="opacity:0.5">(optional)</span></div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px" id="discoverCuisineBtns">
+        <button class="cat-btn" data-cuisine="Mexican">Mexican</button>
+        <button class="cat-btn" data-cuisine="Mediterranean">Mediterranean</button>
+        <button class="cat-btn" data-cuisine="Italian">Italian</button>
+        <button class="cat-btn" data-cuisine="Asian">Asian</button>
+        <button class="cat-btn" data-cuisine="American">American</button>
       </div>
     </div>
 
@@ -6034,8 +6042,9 @@ function openRobotDayPicker(recipeName) {
   showToast(`${recipeName} → ${DAYS[idx]}!`);
 }
 
-let discoverMood = 'surprise';
+let discoverMood = 'comfort';
 let discoverProtein = null;
+let discoverCuisine = null;
 
 function openDiscoverModal() {
   document.getElementById('discoverResults').innerHTML = '';
@@ -6063,6 +6072,20 @@ function openDiscoverModal() {
       }
     });
   });
+  // Wire cuisine buttons
+  document.querySelectorAll('#discoverCuisineBtns .cat-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.cuisine === discoverCuisine);
+    btn.addEventListener('click', () => {
+      if (discoverCuisine === btn.dataset.cuisine) {
+        discoverCuisine = null;
+        btn.classList.remove('active');
+      } else {
+        discoverCuisine = btn.dataset.cuisine;
+        document.querySelectorAll('#discoverCuisineBtns .cat-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+      }
+    });
+  });
 }
 
 function closeDiscoverModal() {
@@ -6085,6 +6108,36 @@ function buildLibraryNames() {
   return getAllRecipes()
     .filter(r => !(r.tags||[]).includes('prep'))
     .map(r => r.name);
+}
+
+
+function discoverSimilarFromEditor() {
+  // Capture current classification from the editor
+  const cuisine = deCuisineSel.length ? deCuisineSel[0] : null;
+  let proteinFocus = null;
+  const proteinMap = { 'Chicken':'chicken','Beef':'beef','Pork':'pork','Fish':'salmon','Shrimp':'shrimp' };
+  for (var i=0;i<deTypeSel.length;i++) { if (proteinMap[deTypeSel[i]]) { proteinFocus = proteinMap[deTypeSel[i]]; break; } }
+
+  // Close editor, open Discover
+  closeDiscoverEditModal();
+  openDiscoverModal();
+
+  // Apply filters
+  if (cuisine) {
+    discoverCuisine = cuisine;
+    document.querySelectorAll('#discoverCuisineBtns .cat-btn').forEach(function(b){
+      b.classList.toggle('active', b.dataset.cuisine === cuisine);
+    });
+  }
+  if (proteinFocus) {
+    discoverProtein = proteinFocus;
+    document.querySelectorAll('#discoverProteinBtns .cat-btn').forEach(function(b){
+      b.classList.toggle('active', b.dataset.protein === proteinFocus);
+    });
+  }
+  showToast('Finding recipes like this one...');
+  // Auto-run discovery
+  setTimeout(function(){ runDiscover(); }, 300);
 }
 
 async function runDiscover() {
@@ -6114,14 +6167,21 @@ async function runDiscover() {
   ];
 
   const moodDescriptions = {
-    surprise: 'a diverse mix of unexplored cuisines and techniques',
-    quick: 'fast weeknight meals under 30 minutes',
-    weekend: 'more involved recipes worth the extra effort on weekends',
-    healthy: 'lighter, nutrient-dense meals',
     comfort: 'hearty, satisfying comfort food',
-    mediterranean: 'Mediterranean and Middle Eastern dishes',
-    new: 'cuisines and flavor profiles completely new to this family'
+    healthy: 'lighter, nutrient-dense meals',
+    kid: 'kid-friendly meals that are still interesting for adults',
+    new: 'exciting dishes with cuisines and flavor profiles new to this family',
+    quick: 'fast weeknight meals under 30 minutes',
+    seasonal: 'dishes that showcase produce and flavors in season right now',
+    weekend: 'more involved recipes worth the extra effort on weekends'
   };
+
+  // Seasonal context based on location + month
+  const now = new Date();
+  const month = now.toLocaleString('en-US', { month: 'long' });
+  const seasonalNote = discoverMood === 'seasonal'
+    ? `\n\nIMPORTANT — Seasonal focus: It is currently ${month} in Northern California (Marin County / Bay Area). Recommend dishes featuring produce and ingredients at their peak right now in this region. Favor what would be fresh at local farmers markets this month.`
+    : '';
 
   const prompt = `You are a culinary recommendation engine for a family meal planning app. 
 
@@ -6134,8 +6194,9 @@ ${allMeals.join(', ')}
 Meals they've actually cooked recently:
 ${usedMeals.length ? usedMeals.join(', ') : 'Just getting started'}
 
-They're looking for: ${moodDescriptions[discoverMood] || 'a good variety'}.
+They're looking for: ${moodDescriptions[discoverMood] || 'a good variety'}.${seasonalNote}
 ${discoverProtein ? `Protein focus: All 5 recipes MUST feature ${discoverProtein} as the main protein.` : ''}
+${discoverCuisine ? `Cuisine focus: All 5 recipes MUST be ${discoverCuisine} cuisine.` : ''}
 
 Recommend exactly 5 specific recipes they would love but haven't tried. For each recipe use ONLY these trusted sources: NYT Cooking, Serious Eats, Smitten Kitchen, Half Baked Harvest, The Kitchn, Budget Bytes, Bon Appétit, Food52.
 
@@ -6517,9 +6578,12 @@ function openDiscoverEditModal(r) {
           <input id="deUrl" class="text-input" type="text" placeholder="https://..." style="margin-bottom:0;flex:1" oninput="onDeUrlChange()" />
           <button class="confirm-btn" id="deImportBtn" onclick="importRecipeFromUrl()" style="flex:0 0 auto;padding:8px 14px;white-space:nowrap;display:none">Import from URL</button>
         </div>
-        <div style="display:flex;gap:8px;justify-content:flex-end">
-          <button class="confirm-btn" style="background:#333;color:#ccc" onclick="closeDiscoverEditModal()">Cancel</button>
-          <button class="confirm-btn" onclick="confirmDiscoverEdit()">Save to Library ✓</button>
+        <div style="display:flex;gap:8px;justify-content:space-between;align-items:center">
+          <button class="confirm-btn" style="background:transparent;border:1.5px solid var(--accent2);color:var(--accent2)" onclick="discoverSimilarFromEditor()">✦ Find similar</button>
+          <div style="display:flex;gap:8px">
+            <button class="confirm-btn" style="background:#333;color:#ccc" onclick="closeDiscoverEditModal()">Cancel</button>
+            <button class="confirm-btn" onclick="confirmDiscoverEdit()">Save to Library ✓</button>
+          </div>
         </div>
       </div>
     `;
