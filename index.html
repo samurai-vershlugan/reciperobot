@@ -845,22 +845,23 @@
   /* Toast */
   .toast {
     position: fixed;
-    bottom: 24px;
-    right: 24px;
+    bottom: 32px;
+    left: 50%;
     background: var(--surface2);
     border: 1px solid var(--accent);
     color: var(--accent);
-    padding: 12px 20px;
-    border-radius: 8px;
+    padding: 12px 22px;
+    border-radius: 100px;
     font-family: 'DM Mono', monospace;
     font-size: 11px;
     letter-spacing: 0.5px;
-    z-index: 9999;
-    transform: translateY(80px);
+    z-index: 100000;
+    transform: translateX(-50%) translateY(80px);
     opacity: 0;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
     transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1);
   }
-  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
 
   /* Swap modal */
   .modal-overlay {
@@ -2122,12 +2123,12 @@
   <div class="planner">
     <div class="section-label">This Week's Plan</div>
     <div class="week-grid" id="weekGrid"></div>
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
       <button class="rotation-toggle" id="rotationToggle" onclick="toggleRotationLibrary()">
         <span>My Recipes</span>
         <span id="rotationToggleIcon">▾</span>
       </button>
-      <button class="add-library-btn" onclick="openAddLibraryModal()">＋ Add to Library</button>
+      <button class="add-library-btn" onclick="openAddLibraryModal()">＋ Add Recipe</button>
     </div>
     <div id="recipeBrowser" style="display:none">
       <input id="recipeSearchInput" class="text-input" type="text" placeholder="Search recipes..." style="width:100%;box-sizing:border-box;margin-bottom:8px" oninput="renderRotationGrid()" />
