@@ -3230,7 +3230,17 @@ function renderGroceryList() {
     const group = document.createElement('div');
     group.className = 'grocery-store-group';
     group.innerHTML = `<div class="store-name ${cls}"><span class="store-dot"></span>${label}</div>`;
-    
+
+    // Sort: unchecked items first, then alphabetical by clean name
+    byStore[sk].sort((a, b) => {
+      const aChecked = checkedIngredients[`${key}-${a.item}`] ? 1 : 0;
+      const bChecked = checkedIngredients[`${key}-${b.item}`] ? 1 : 0;
+      if (aChecked !== bChecked) return aChecked - bChecked;
+      const aName = (a.name || parseIngredientParts(a.item).name).toLowerCase();
+      const bName = (b.name || parseIngredientParts(b.item).name).toLowerCase();
+      return aName.localeCompare(bName);
+    });
+
     byStore[sk].forEach(ing => {
       const itemKey = `${key}-${ing.item}`;
       const checked = checkedIngredients[itemKey] ? 'checked' : '';
