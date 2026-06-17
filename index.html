@@ -2825,6 +2825,7 @@ function getMondayOfWeek(offset) {
 }
 let weekPlans = {}; // keyed by weekOffset
 let checkedIngredients = {};
+let extraGroceryItems = {}; // { weekKey: [ {item, store} ] }
 let swapTarget = null;
 let lockedDays = {}; // keyed by "weekKey-dayIndex"
 
@@ -3131,6 +3132,17 @@ function renderGroceryList() {
         if (havePantryItem(ing.item)) checkedIngredients[itemKey] = true;
       }
     });
+  });
+
+  // Add manually-added extra items (e.g. from Recipe Robot)
+  (extraGroceryItems[key] || []).forEach(ex => {
+    if (!seen.has(ex.item)) {
+      seen.add(ex.item);
+      if (havePantryItem(ex.item)) { checkedIngredients[`${key}-${ex.item}`] = true; return; }
+      const itemKey = `${key}-${ex.item}`;
+      const effectiveStore = getEffectiveStore(itemKey, ex);
+      (byStore[effectiveStore] || byStore.tj).push({ ...ex, _effectiveStore: effectiveStore, _isExtra: true });
+    }
   });
 
   const el = document.getElementById('groceryList');
@@ -5985,15 +5997,19 @@ function buildRobotNewCard(r) {
 
 function robotAddToGrocery(items) {
   const key = getWeekKey(currentWeekOffset);
+  if (!extraGroceryItems[key]) extraGroceryItems[key] = [];
+  let added = 0;
   items.forEach(item => {
-    // Add as unchecked grocery item for current week
-    const ik = `${key}-${item}`;
-    if (checkedIngredients[ik] === undefined) {
-      checkedIngredients[ik] = false;
-    }
+    const name = typeof item === 'string' ? item : item.item;
+    if (!name) return;
+    // Skip if already a manual extra or already in pantry
+    const exists = extraGroceryItems[key].some(x => x.item.toLowerCase() === name.toLowerCase());
+    if (exists || havePantryItem(name)) return;
+    extraGroceryItems[key].push({ item: name, store: 'tj' });
+    added++;
   });
-  showToast(`Added ${items.length} item${items.length>1?'s':''} to grocery list`);
-  try { localStorage.setItem('mealos-checked', JSON.stringify(checkedIngredients)); } catch(e) {}
+  try { localStorage.setItem('mealos-extras', JSON.stringify(extraGroceryItems)); } catch(e) {}
+  showToast(added ? `Added ${added} item${added>1?'s':''} to grocery list` : 'Those are already covered');
   renderGroceryList();
   renderAlexaCommands();
 }
