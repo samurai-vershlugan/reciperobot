@@ -3256,6 +3256,23 @@ async function toggleIngredient(itemKey, el) {
   updateConfirmBar();
 }
 
+function parseIngredientParts(raw) {
+  // Returns { amount, name } — amount is the measurement prefix, name is the clean shopping name
+  if (!raw) return { amount: '', name: '' };
+  const full = raw.trim();
+  const name = normalizeIngredient(full);
+  // Amount = the portion of the original before the clean name's first word
+  let amount = '';
+  if (name) {
+    const firstWord = name.split(' ')[0];
+    const idx = full.toLowerCase().indexOf(firstWord);
+    if (idx > 0) amount = full.slice(0, idx).trim().replace(/[,]+$/, '');
+  }
+  // Capitalize the clean name nicely for display
+  const displayName = name ? name.charAt(0).toUpperCase() + name.slice(1) : full;
+  return { amount: amount, name: displayName };
+}
+
 function normalizeIngredient(name) {
   if (!name) return '';
   let s = name.toLowerCase().trim();
