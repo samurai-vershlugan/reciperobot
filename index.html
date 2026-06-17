@@ -5159,13 +5159,22 @@ let addLibraryDayIndex = null;
 
 function openAddLibraryModal(dayIndex = null) {
   addLibraryDayIndex = dayIndex;
-  document.getElementById('libraryNameInput').value = '';
-  document.getElementById('libraryCatInput').value = 'chicken';
-  // Update modal title hint if coming from a day card
-  const hint = document.getElementById('addLibraryHint');
-  if (hint) hint.textContent = dayIndex !== null ? `This meal will be added to ${DAYS[dayIndex]} and saved to the library.` : 'This meal will join the rotation permanently.';
-  document.getElementById('addLibraryModal').classList.add('open');
-  setTimeout(() => document.getElementById('libraryNameInput').focus(), 80);
+  // Open the rich editor empty — supports URL import, ingredients, steps, classification
+  openDiscoverEditModal({
+    name: '',
+    category: 'chicken',
+    ingredients: [],
+    steps: [],
+    url: '',
+    cuisine: [],
+    type: [],
+    proteins: []
+  });
+  // Focus the URL field so "paste a URL" is the natural first action
+  setTimeout(function() {
+    const u = document.getElementById('deUrl');
+    if (u) u.focus();
+  }, 100);
 }
 
 function closeAddLibraryModal(e) {
