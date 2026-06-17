@@ -3360,7 +3360,9 @@ async function migrateIngredientNames() {
     const ings = row.ingredients_json || [];
     if (!ings.length) continue;
     const newIngs = ings.map(function(ing) {
-      const itemText = typeof ing === 'string' ? ing : ing.item;
+      let itemText = typeof ing === 'string' ? ing : ing.item;
+      // Clean leading bullets from the stored item text too
+      itemText = itemText.replace(/^[\s*\-•·]+/, '').trim();
       const store = (typeof ing === 'object' && ing.store) ? ing.store : 'tj';
       const parsed = parseIngredientParts(itemText);
       return { item: itemText, name: parsed.name, amount: parsed.amount, store: store };
@@ -3388,7 +3390,8 @@ function ingCleanName(ing) {
 function parseIngredientParts(raw) {
   // Returns { amount, name } — amount is the measurement prefix, name is the clean shopping name
   if (!raw) return { amount: '', name: '' };
-  const full = raw.trim();
+  // Strip leading markdown bullets / list markers (* - •) and whitespace
+  const full = raw.replace(/^[\s*\-•·]+/, '').trim();
   const name = normalizeIngredient(full);
   // Amount = the portion of the original before the clean name's first word
   let amount = '';
@@ -3405,6 +3408,8 @@ function parseIngredientParts(raw) {
 function normalizeIngredient(name) {
   if (!name) return '';
   let s = name.toLowerCase().trim();
+  // Strip leading bullet/list markers
+  s = s.replace(/^[\s*\-•·]+/, '');
   // Strip fused number+unit tokens anywhere: 120g, 14oz, 2lb, 400ml, 1.5kg
   s = s.replace(/\b\d+(\.\d+)?\s*(g|kg|mg|oz|lb|lbs|ml|l|cl)\b/g, ' ');
   // Remove leading quantities and fractions: "1½", "2", "3 tbsp", "½ cup", "2 x 14oz"
