@@ -3295,6 +3295,7 @@ function renderGroceryList() {
 // ─── STORE OVERRIDES ─────────────────────────────────────────────────────────
 // Keyed by weekKey-itemName, value is store override string
 let storeOverrides = {};
+try { const _so = localStorage.getItem('mealos-store-overrides'); if (_so) storeOverrides = JSON.parse(_so); } catch(e) {}
 
 const STORE_CYCLE = ['tj', 'costco', 'safeway', 'wf'];
 const STORE_LABELS = { tj:"TJ's", costco:'Costco', safeway:'Safeway', wf:'WF' };
@@ -3302,6 +3303,7 @@ const STORE_CLASSES = { tj:'tj', costco:'costco', safeway:'safeway', wf:'wf' };
 
 function changeStore(itemKey, newStore) {
   storeOverrides[itemKey] = newStore;
+  try { localStorage.setItem('mealos-store-overrides', JSON.stringify(storeOverrides)); } catch(e) {}
   renderGroceryList();
   renderAlexaCommands();
 }
