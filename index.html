@@ -3271,6 +3271,45 @@ async function toggleIngredient(itemKey, el) {
   updateConfirmBar();
 }
 
+
+async function migrateIngredientNames() {
+  await ensureFreshToken();
+  if (!FAMILY_ID || !AUTH_TOKEN) { console.error('Not logged in'); return; }
+  console.log('Fetching recipes...');
+  let rows;
+  try {
+    const resp = await fetch(SUPABASE_URL + '/rest/v1/recipes?family_id=eq.' + FAMILY_ID + '&select=id,name,ingredients_json', {
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + AUTH_TOKEN }
+    });
+    rows = await resp.json();
+  } catch(e) { console.error('Fetch failed:', e); return; }
+  if (!Array.isArray(rows)) { console.error('Unexpected response:', rows); return; }
+
+  console.log('Migrating ' + rows.length + ' recipes...');
+  let updated = 0;
+  for (const row of rows) {
+    const ings = row.ingredients_json || [];
+    if (!ings.length) continue;
+    const newIngs = ings.map(function(ing) {
+      const itemText = typeof ing === 'string' ? ing : ing.item;
+      const store = (typeof ing === 'object' && ing.store) ? ing.store : 'tj';
+      const parsed = parseIngredientParts(itemText);
+      return { item: itemText, name: parsed.name, amount: parsed.amount, store: store };
+    });
+    try {
+      const up = await fetch(SUPABASE_URL + '/rest/v1/recipes?id=eq.' + row.id, {
+        method: 'PATCH',
+        headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + AUTH_TOKEN, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ ingredients_json: newIngs })
+      });
+      if (up.ok) { updated++; console.log('  ✓ ' + row.name); }
+      else { console.warn('  ✗ ' + row.name + ' (' + up.status + ')'); }
+    } catch(e) { console.warn('  ✗ ' + row.name, e); }
+  }
+  console.log('Done! Updated ' + updated + '/' + rows.length + ' recipes. Refresh to see changes.');
+  showToast('Migrated ' + updated + ' recipes');
+}
+
 function parseIngredientParts(raw) {
   // Returns { amount, name } — amount is the measurement prefix, name is the clean shopping name
   if (!raw) return { amount: '', name: '' };
