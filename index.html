@@ -2040,6 +2040,14 @@
     margin-left: 6px;
     opacity: 0.7;
   }
+
+  .ing-edit-btn {
+    background: none; border: none; color: var(--text-muted);
+    cursor: pointer; font-size: 11px; padding: 0 4px; opacity: 0;
+    transition: opacity 0.15s;
+  }
+  .ingredient-item:hover .ing-edit-btn { opacity: 0.5; }
+  .ing-edit-btn:hover { opacity: 1 !important; color: var(--accent); }
 </style>
 
 <!-- ─── LOGIN SCREEN ─────────────────────────────────────────────────────── -->
@@ -3111,6 +3119,46 @@ function shopName(s) {
 
 // ─── GROCERY LIST ─────────────────────────────────────────────────────────────
 
+
+async function renameGroceryItem(ing, currentName) {
+  const newName = prompt('Rename grocery item:', currentName);
+  if (newName === null) return;
+  const trimmed = newName.trim();
+  if (!trimmed || trimmed === currentName) return;
+
+  await ensureFreshToken();
+  const oldItemText = ing.item;
+
+  // Update in-memory across all recipes that use this ingredient
+  let touchedRecipes = [];
+  Object.values(RECIPES).flat().forEach(function(r) {
+    if (!r.ingredients) return;
+    let changed = false;
+    r.ingredients.forEach(function(i) {
+      if (i.item === oldItemText || (i.name && i.name.toLowerCase() === currentName.toLowerCase())) {
+        i.name = trimmed;
+        changed = true;
+      }
+    });
+    if (changed && r.custom) touchedRecipes.push(r);
+  });
+
+  // Persist to Supabase for each affected custom recipe
+  for (const r of touchedRecipes) {
+    try {
+      await fetch(SUPABASE_URL + '/rest/v1/recipes?family_id=eq.' + FAMILY_ID + '&name=eq.' + encodeURIComponent(r.name), {
+        method: 'PATCH',
+        headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + AUTH_TOKEN, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ ingredients_json: r.ingredients })
+      });
+    } catch(e) { console.warn('Rename persist failed for', r.name, e); }
+  }
+
+  renderGroceryList();
+  renderAlexaCommands();
+  showToast('Renamed to "' + trimmed + '"');
+}
+
 function renderGroceryList() {
   const key = getWeekKey(currentWeekOffset);
   const plan = weekPlans[key] || [];
@@ -3202,6 +3250,13 @@ function renderGroceryList() {
         nameSpan.appendChild(amt);
       }
       div.appendChild(nameSpan);
+      // Tap-to-edit pencil
+      const editBtn = document.createElement('button');
+      editBtn.className = 'ing-edit-btn';
+      editBtn.textContent = '✎';
+      editBtn.title = 'Rename this item';
+      editBtn.onclick = (e) => { e.stopPropagation(); renameGroceryItem(ing, parts.name); };
+      div.appendChild(editBtn);
       if (havePantryItem(ing.item)) {
         div.appendChild(makePantryQtyStepper(parts.name.toLowerCase()));
       }
