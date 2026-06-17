@@ -3338,9 +3338,13 @@ function parseIngredientParts(raw) {
 function normalizeIngredient(name) {
   if (!name) return '';
   let s = name.toLowerCase().trim();
+  // Strip fused number+unit tokens anywhere: 120g, 14oz, 2lb, 400ml, 1.5kg
+  s = s.replace(/\b\d+(\.\d+)?\s*(g|kg|mg|oz|lb|lbs|ml|l|cl)\b/g, ' ');
   // Remove leading quantities and fractions: "1½", "2", "3 tbsp", "½ cup", "2 x 14oz"
   s = s.replace(/^[\d\s\/¼½¾⅓⅔⅛.,x×-]+/, '');
-  // Remove common units and measurement words
+  // Remove standalone measurement-range artifacts like "- 120" or leftover dashes
+  s = s.replace(/^[\s\-–—]+/, '');
+  // Remove common units and measurement words (now also catches stray single letters)
   s = s.replace(/\b(tsp|teaspoon|teaspoons|tbsp|tablespoon|tablespoons|cup|cups|oz|ounce|ounces|lb|lbs|pound|pounds|g|gram|grams|kg|ml|l|liter|litre|tin|tins|can|cans|clove|cloves|pinch|handful|bunch|sprig|sprigs|slice|slices|stick|sticks|piece|pieces|fillet|fillets)\b/g, '');
   // Remove prep / descriptor words
   s = s.replace(/\b(fresh|dried|ground|crushed|minced|chopped|finely|drained|very|well|extra|large|medium|small|skin-on|skin\s*on|bone-in|bone\s*in|boneless|skinless|to serve|to taste|of|the|and|or|x)\b/g, '');
