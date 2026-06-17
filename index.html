@@ -6320,38 +6320,98 @@ let deTypeSel = [];
 let deProteins = [];
 
 function renderDeClassChips() {
+  // Cuisine chips (selected) + dropdown (unselected options)
   const cEl = document.getElementById('deCuisineChips');
   if (cEl) {
     cEl.innerHTML = '';
-    CUISINE_FILTERS.forEach(function(label) {
-      const b = document.createElement('button');
-      b.className = 'cat-btn' + (deCuisineSel.includes(label) ? ' active' : '');
-      b.textContent = label;
-      b.style.cssText = 'font-size:10px;padding:4px 10px';
-      b.onclick = function() {
-        if (deCuisineSel.includes(label)) deCuisineSel = deCuisineSel.filter(function(x){return x!==label;});
-        else deCuisineSel.push(label);
-        renderDeClassChips();
-      };
-      cEl.appendChild(b);
+    deCuisineSel.forEach(function(label) {
+      cEl.appendChild(makeClassChip(label, 'cuisine'));
     });
+    if (!deCuisineSel.length) {
+      cEl.innerHTML = '<span style="font-size:11px;color:var(--text-muted)">None selected — will auto-detect</span>';
+    }
   }
+  const cSel = document.getElementById('deCuisineSelect');
+  if (cSel) {
+    const opts = CUISINE_FILTERS.filter(function(l){ return !deCuisineSel.includes(l); });
+    cSel.innerHTML = '<option value="">+ Add cuisine...</option>' +
+      opts.map(function(l){ return '<option value="'+l+'">'+l+'</option>'; }).join('') +
+      '<option value="__custom__">+ Custom...</option>';
+  }
+  // Type chips + dropdown
   const tEl = document.getElementById('deTypeChips');
   if (tEl) {
     tEl.innerHTML = '';
-    TYPE_FILTERS.forEach(function(label) {
-      const b = document.createElement('button');
-      b.className = 'cat-btn' + (deTypeSel.includes(label) ? ' active' : '');
-      b.textContent = label;
-      b.style.cssText = 'font-size:10px;padding:4px 10px';
-      b.onclick = function() {
-        if (deTypeSel.includes(label)) deTypeSel = deTypeSel.filter(function(x){return x!==label;});
-        else deTypeSel.push(label);
-        renderDeClassChips();
-      };
-      tEl.appendChild(b);
+    deTypeSel.forEach(function(label) {
+      tEl.appendChild(makeClassChip(label, 'type'));
     });
+    if (!deTypeSel.length) {
+      tEl.innerHTML = '<span style="font-size:11px;color:var(--text-muted)">None selected — will auto-detect</span>';
+    }
   }
+  const tSel = document.getElementById('deTypeSelect');
+  if (tSel) {
+    const opts = TYPE_FILTERS.filter(function(l){ return !deTypeSel.includes(l); });
+    tSel.innerHTML = '<option value="">+ Add type...</option>' +
+      opts.map(function(l){ return '<option value="'+l+'">'+l+'</option>'; }).join('') +
+      '<option value="__custom__">+ Custom...</option>';
+  }
+}
+
+function makeClassChip(label, kind) {
+  const chip = document.createElement('span');
+  chip.className = 'cat-btn active';
+  chip.style.cssText = 'font-size:10px;padding:4px 10px;display:inline-flex;align-items:center;gap:5px';
+  chip.appendChild(document.createTextNode(label));
+  const x = document.createElement('span');
+  x.textContent = '×';
+  x.style.cssText = 'cursor:pointer;font-weight:700';
+  x.onclick = function() {
+    if (kind === 'cuisine') deCuisineSel = deCuisineSel.filter(function(v){return v!==label;});
+    else deTypeSel = deTypeSel.filter(function(v){return v!==label;});
+    renderDeClassChips();
+  };
+  chip.appendChild(x);
+  return chip;
+}
+
+function dePickCuisine(val) {
+  if (!val) return;
+  if (val === '__custom__') {
+    const custom = prompt('Enter a custom cuisine:');
+    if (custom && custom.trim()) {
+      const c = custom.trim();
+      if (!CUISINE_FILTERS.includes(c)) CUISINE_FILTERS.push(c);
+      if (!deCuisineSel.includes(c)) deCuisineSel.push(c);
+    }
+  } else if (!deCuisineSel.includes(val)) {
+    deCuisineSel.push(val);
+  }
+  renderDeClassChips();
+}
+
+function dePickType(val) {
+  if (!val) return;
+  if (val === '__custom__') {
+    const custom = prompt('Enter a custom type:');
+    if (custom && custom.trim()) {
+      const c = custom.trim();
+      if (!TYPE_FILTERS.includes(c)) TYPE_FILTERS.push(c);
+      if (!deTypeSel.includes(c)) deTypeSel.push(c);
+    }
+  } else if (!deTypeSel.includes(val)) {
+    deTypeSel.push(val);
+  }
+  renderDeClassChips();
+}
+
+// Derive the legacy single category from cuisine/type selections
+function deriveCategoryFromSelections() {
+  const cuisineToCat = { 'Mexican':'taco', 'Mediterranean':'mediterranean', 'Italian':'pasta' };
+  const typeToCat = { 'Chicken':'chicken', 'Beef':'steak', 'Fish':'fish', 'Shrimp':'fish', 'Pasta':'pasta', 'Burger':'burger', 'Soup':'slowcooker' };
+  for (var i=0;i<deCuisineSel.length;i++) if (cuisineToCat[deCuisineSel[i]]) return cuisineToCat[deCuisineSel[i]];
+  for (var j=0;j<deTypeSel.length;j++) if (typeToCat[deTypeSel[j]]) return typeToCat[deTypeSel[j]];
+  return 'other';
 }
 
 function renderDeProteins() {
@@ -6403,32 +6463,30 @@ function openDiscoverEditModal(r) {
         </p>
         <label class="input-label">Recipe Name</label>
         <input id="deRecipeName" class="text-input" type="text" style="margin-bottom:10px" />
-        <label class="input-label">Category</label>
-        <select id="deCategory" class="text-input" style="margin-bottom:10px;background:var(--surface2);color:var(--text)">
-          <option value="chicken">Chicken</option>
-          <option value="mediterranean">Mediterranean</option>
-          <option value="taco">Mexican</option>
-          <option value="pasta">Pasta</option>
-          <option value="fish">Fish</option>
-          <option value="burger">Burgers</option>
-          <option value="steak">Steak</option>
-          <option value="slowcooker">Slow Cooker</option>
-          <option value="other">Other</option>
+        <label class="input-label">Cuisine</label>
+        <div id="deCuisineChips" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px"></div>
+        <select id="deCuisineSelect" class="text-input" style="margin-bottom:10px;background:var(--surface2);color:var(--text)" onchange="dePickCuisine(this.value)">
+          <option value="">+ Add cuisine...</option>
         </select>
 
-        <label class="input-label">Cuisine <span style="opacity:0.5;font-size:9px">(leave blank to auto-detect)</span></label>
-        <div id="deCuisineChips" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px"></div>
+        <label class="input-label">Type</label>
+        <div id="deTypeChips" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px"></div>
+        <select id="deTypeSelect" class="text-input" style="margin-bottom:10px;background:var(--surface2);color:var(--text)" onchange="dePickType(this.value)">
+          <option value="">+ Add type...</option>
+        </select>
 
-        <label class="input-label">Type <span style="opacity:0.5;font-size:9px">(leave blank to auto-detect)</span></label>
-        <div id="deTypeChips" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px"></div>
-
-        <label class="input-label">Protein options <span style="opacity:0.5;font-size:9px">(optional — for swappable proteins)</span></label>
-        <div id="deProteinList" style="margin-bottom:6px"></div>
-        <div style="display:flex;gap:6px;margin-bottom:10px">
-          <input id="deProteinLabel" class="text-input" type="text" placeholder="Label (e.g. Chicken)" style="margin-bottom:0;flex:1;font-size:12px;padding:6px 10px" />
-          <input id="deProteinItem" class="text-input" type="text" placeholder="Ingredient" style="margin-bottom:0;flex:1.4;font-size:12px;padding:6px 10px" />
-          <button class="confirm-btn" onclick="deAddProtein()" style="padding:6px 12px;flex:0 0 auto">Add</button>
-        </div>
+        <details style="margin-bottom:12px;border:1px solid var(--border);border-radius:8px;padding:8px 10px">
+          <summary style="cursor:pointer;font-family:var(--font-mono,monospace);font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted)">Advanced: Swappable proteins</summary>
+          <div style="margin-top:10px">
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;line-height:1.4">Add interchangeable proteins (like Tacos → Beef / Carnitas / Turkey). Selecting one updates the grocery list and meal name.</div>
+            <div id="deProteinList" style="margin-bottom:6px"></div>
+            <div style="display:flex;gap:6px">
+              <input id="deProteinLabel" class="text-input" type="text" placeholder="Label (e.g. Chicken)" style="margin-bottom:0;flex:1;font-size:12px;padding:6px 10px" />
+              <input id="deProteinItem" class="text-input" type="text" placeholder="Ingredient" style="margin-bottom:0;flex:1.4;font-size:12px;padding:6px 10px" />
+              <button class="confirm-btn" onclick="deAddProtein()" style="padding:6px 12px;flex:0 0 auto">Add</button>
+            </div>
+          </div>
+        </details>
 
         <label class="input-label">Ingredients <span style="opacity:0.5;font-size:9px">(one per line, format: ingredient, store)</span></label>
         <textarea id="deIngredients" style="width:100%;box-sizing:border-box;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'DM Mono',monospace;font-size:11px;padding:10px;min-height:160px;resize:vertical;outline:none;margin-bottom:10px"></textarea>
@@ -6450,7 +6508,7 @@ function openDiscoverEditModal(r) {
 
   // Pre-fill with what we have
   document.getElementById('deRecipeName').value = r.name || '';
-  document.getElementById('deCategory').value = r.category || 'other';
+  // category now derived from cuisine/type selections
   document.getElementById('deIngredients').value = (r.ingredients || [])
     .map(i => typeof i === 'string' ? `${i}, tj` : `${i.item}, ${i.store || 'tj'}`)
     .join('\n');
@@ -6549,7 +6607,7 @@ function confirmDiscoverEdit() {
     }
   }
 
-  const cat = document.getElementById('deCategory').value;
+  const cat = deriveCategoryFromSelections();
   const ingredientLines = document.getElementById('deIngredients').value
     .split('\n').map(l => l.trim()).filter(Boolean);
   const stepLines = document.getElementById('deSteps').value
