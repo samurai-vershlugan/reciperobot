@@ -3980,6 +3980,7 @@ const TYPE_FILTERS = ['Chicken','Beef','Pork','Fish','Shrimp','Pasta','Burger','
 
 // Map a recipe to its cuisine(s) using category + tags + name keywords
 function recipeCuisines(r) {
+  if (Array.isArray(r.cuisine) && r.cuisine.length) return r.cuisine;
   const out = new Set();
   const tags = (r.tags || []).map(t => t.toLowerCase());
   const name = r.name.toLowerCase();
@@ -3994,6 +3995,7 @@ function recipeCuisines(r) {
 
 // Map a recipe to its type/format using category + ingredients + name
 function recipeTypes(r) {
+  if (Array.isArray(r.type) && r.type.length) return r.type;
   const out = new Set();
   const tags = (r.tags || []).map(t => t.toLowerCase());
   const name = r.name.toLowerCase();
@@ -5036,6 +5038,9 @@ async function loadCustomRecipes() {
             shop: null,
             ingredients: row.ingredients || row.ingredients_json || [],
             steps: row.steps || row.steps_json || undefined,
+            cuisine: row.cuisine_json || undefined,
+            type: row.type_json || undefined,
+            proteins: row.proteins_json || undefined,
             url: row.url || null,
             custom: true,
             sbId: row.id
@@ -6298,6 +6303,77 @@ function editSavedRecipe() {
   openDiscoverEditModal(editObj);
 }
 
+
+// ─── RECIPE CLASSIFICATION EDITOR ──────────────────────────────────────────────
+let deCuisineSel = [];
+let deTypeSel = [];
+let deProteins = [];
+
+function renderDeClassChips() {
+  const cEl = document.getElementById('deCuisineChips');
+  if (cEl) {
+    cEl.innerHTML = '';
+    CUISINE_FILTERS.forEach(function(label) {
+      const b = document.createElement('button');
+      b.className = 'cat-btn' + (deCuisineSel.includes(label) ? ' active' : '');
+      b.textContent = label;
+      b.style.cssText = 'font-size:10px;padding:4px 10px';
+      b.onclick = function() {
+        if (deCuisineSel.includes(label)) deCuisineSel = deCuisineSel.filter(function(x){return x!==label;});
+        else deCuisineSel.push(label);
+        renderDeClassChips();
+      };
+      cEl.appendChild(b);
+    });
+  }
+  const tEl = document.getElementById('deTypeChips');
+  if (tEl) {
+    tEl.innerHTML = '';
+    TYPE_FILTERS.forEach(function(label) {
+      const b = document.createElement('button');
+      b.className = 'cat-btn' + (deTypeSel.includes(label) ? ' active' : '');
+      b.textContent = label;
+      b.style.cssText = 'font-size:10px;padding:4px 10px';
+      b.onclick = function() {
+        if (deTypeSel.includes(label)) deTypeSel = deTypeSel.filter(function(x){return x!==label;});
+        else deTypeSel.push(label);
+        renderDeClassChips();
+      };
+      tEl.appendChild(b);
+    });
+  }
+}
+
+function renderDeProteins() {
+  const el = document.getElementById('deProteinList');
+  if (!el) return;
+  el.innerHTML = '';
+  deProteins.forEach(function(p, i) {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:6px;font-size:12px;padding:3px 0';
+    const txt = document.createElement('span');
+    txt.style.flex = '1';
+    txt.textContent = p.label + ' — ' + p.item + ' (' + (p.store || 'tj') + ')';
+    const del = document.createElement('button');
+    del.className = 'pantry-item-remove';
+    del.textContent = '✕';
+    del.onclick = function() { deProteins.splice(i, 1); renderDeProteins(); };
+    row.appendChild(txt);
+    row.appendChild(del);
+    el.appendChild(row);
+  });
+}
+
+function deAddProtein() {
+  const label = document.getElementById('deProteinLabel').value.trim();
+  const item = document.getElementById('deProteinItem').value.trim();
+  if (!label || !item) { showToast('Enter both a label and ingredient'); return; }
+  deProteins.push({ label: label, item: item, store: 'costco' });
+  document.getElementById('deProteinLabel').value = '';
+  document.getElementById('deProteinItem').value = '';
+  renderDeProteins();
+}
+
 function openDiscoverEditModal(r) {
   pendingDiscoverRecipe = r;
 
@@ -6329,6 +6405,21 @@ function openDiscoverEditModal(r) {
           <option value="slowcooker">Slow Cooker</option>
           <option value="other">Other</option>
         </select>
+
+        <label class="input-label">Cuisine <span style="opacity:0.5;font-size:9px">(leave blank to auto-detect)</span></label>
+        <div id="deCuisineChips" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px"></div>
+
+        <label class="input-label">Type <span style="opacity:0.5;font-size:9px">(leave blank to auto-detect)</span></label>
+        <div id="deTypeChips" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px"></div>
+
+        <label class="input-label">Protein options <span style="opacity:0.5;font-size:9px">(optional — for swappable proteins)</span></label>
+        <div id="deProteinList" style="margin-bottom:6px"></div>
+        <div style="display:flex;gap:6px;margin-bottom:10px">
+          <input id="deProteinLabel" class="text-input" type="text" placeholder="Label (e.g. Chicken)" style="margin-bottom:0;flex:1;font-size:12px;padding:6px 10px" />
+          <input id="deProteinItem" class="text-input" type="text" placeholder="Ingredient" style="margin-bottom:0;flex:1.4;font-size:12px;padding:6px 10px" />
+          <button class="confirm-btn" onclick="deAddProtein()" style="padding:6px 12px;flex:0 0 auto">Add</button>
+        </div>
+
         <label class="input-label">Ingredients <span style="opacity:0.5;font-size:9px">(one per line, format: ingredient, store)</span></label>
         <textarea id="deIngredients" style="width:100%;box-sizing:border-box;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'DM Mono',monospace;font-size:11px;padding:10px;min-height:160px;resize:vertical;outline:none;margin-bottom:10px"></textarea>
         <label class="input-label">Steps <span style="opacity:0.5;font-size:9px">(one per line)</span></label>
@@ -6356,6 +6447,11 @@ function openDiscoverEditModal(r) {
   document.getElementById('deSteps').value = (r.steps || []).join('\n');
   document.getElementById('deUrl').value = r.url || '';
   deOriginalUrl = r.url || '';
+  deCuisineSel = Array.isArray(r.cuisine) ? r.cuisine.slice() : [];
+  deTypeSel = Array.isArray(r.type) ? r.type.slice() : [];
+  deProteins = Array.isArray(r.proteins) ? r.proteins.map(function(p){return {label:p.label,item:p.item,store:p.store||'costco'};}) : [];
+  renderDeClassChips();
+  renderDeProteins();
   var _imp = document.getElementById('deImportBtn');
   if (_imp) _imp.style.display = 'none';
 
@@ -6464,6 +6560,9 @@ function confirmDiscoverEdit() {
     url: url || null,
     ingredients,
     steps: stepLines.length ? stepLines : undefined,
+    cuisine: deCuisineSel.length ? deCuisineSel.slice() : undefined,
+    type: deTypeSel.length ? deTypeSel.slice() : undefined,
+    proteins: deProteins.length ? deProteins.slice() : undefined,
     custom: true
   };
 
@@ -6489,6 +6588,9 @@ function confirmDiscoverEdit() {
         tags_json: recipe.tags,
         ingredients_json: ingredients,
         steps_json: stepLines,
+        cuisine_json: deCuisineSel.length ? deCuisineSel : null,
+        type_json: deTypeSel.length ? deTypeSel : null,
+        proteins_json: deProteins.length ? deProteins : null,
         url: url || null
       })
     }).catch(e => console.warn('Save recipe error:', e));
