@@ -3992,8 +3992,8 @@ const TYPE_FILTERS = ['Chicken','Beef','Pork','Fish','Shrimp','Pasta','Burger','
 
 // Map a recipe to its cuisine(s) using category + tags + name keywords
 function recipeCuisines(r) {
-  if (Array.isArray(r.cuisine) && r.cuisine.length) return r.cuisine;
   const out = new Set();
+  if (Array.isArray(r.cuisine)) r.cuisine.forEach(c => out.add(c));
   const tags = (r.tags || []).map(t => t.toLowerCase());
   const name = r.name.toLowerCase();
   const inCat = (c) => tags.includes(c) || (RECIPES[c] || []).some(x => x.name === r.name);
@@ -4007,12 +4007,13 @@ function recipeCuisines(r) {
 
 // Map a recipe to its type/format using category + ingredients + name
 function recipeTypes(r) {
-  if (Array.isArray(r.type) && r.type.length) return r.type;
   const out = new Set();
+  // Manual overrides ADD to (not replace) auto-detection
+  if (Array.isArray(r.type)) r.type.forEach(t => out.add(t));
   const tags = (r.tags || []).map(t => t.toLowerCase());
   const name = r.name.toLowerCase();
   const inCat = (c) => tags.includes(c) || (RECIPES[c] || []).some(x => x.name === r.name);
-  // Proteins via existing matcher
+  // Proteins via existing matcher — always runs, including protein-picker options
   ['Chicken','Beef','Pork','Fish','Shrimp'].forEach(p => {
     if (recipeUsesProtein(r, p)) out.add(p);
   });
