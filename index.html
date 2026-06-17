@@ -3121,8 +3121,9 @@ function renderGroceryList() {
   // Collect prep recipe ingredients first
   getPrepRecipesForWeek(plan).forEach(pr => {
     (pr.ingredients || []).forEach(ing => {
-      if (!seen.has(ing.item)) {
-        seen.add(ing.item);
+      const _ck = ingCleanName(ing).toLowerCase();
+      if (!seen.has(_ck)) {
+        seen.add(_ck);
         if (havePantryItem(ing.item)) { checkedIngredients[`${key}-${ing.item}`] = true; return; }
         const itemKey = `${key}-${ing.item}`;
         const effectiveStore = getEffectiveStore(itemKey, ing);
@@ -3141,8 +3142,9 @@ function renderGroceryList() {
     (liveMeal.ingredients || []).forEach(ing => mealIngs.push(ing));
 
     mealIngs.forEach(ing => {
-      if (!seen.has(ing.item)) {
-        seen.add(ing.item);
+      const cleanKey = ingCleanName(ing).toLowerCase();
+      if (!seen.has(cleanKey)) {
+        seen.add(cleanKey);
         const itemKey = `${key}-${ing.item}`;
         const effectiveStore = getEffectiveStore(itemKey, ing);
         (byStore[effectiveStore] || byStore.tj).push({ ...ing, _effectiveStore: effectiveStore });
@@ -3310,6 +3312,12 @@ async function migrateIngredientNames() {
   showToast('Migrated ' + updated + ' recipes');
 }
 
+function ingCleanName(ing) {
+  if (ing && ing.name) return ing.name;
+  const p = parseIngredientParts(typeof ing === 'string' ? ing : (ing.item || ''));
+  return p.name;
+}
+
 function parseIngredientParts(raw) {
   // Returns { amount, name } — amount is the measurement prefix, name is the clean shopping name
   if (!raw) return { amount: '', name: '' };
@@ -3442,11 +3450,13 @@ function renderAlexaCommands() {
       const itemKey = `${key}-${ing.item}`;
       // Skip if already checked off in grocery list
       if (havePantryItem(ing.item) || checkedIngredients[itemKey]) return;
-      if (seen.has(ing.item)) return;
-      seen.add(ing.item);
+      const clean = ingCleanName(ing);
+      const dedupKey = clean.toLowerCase();
+      if (seen.has(dedupKey)) return;
+      seen.add(dedupKey);
       const store = getEffectiveStore(itemKey, ing);
       const list = store === 'wf' ? 'Whole Foods' : store === 'costco' ? 'Costco' : store === 'safeway' ? 'Safeway' : 'Trader Joes';
-      items.push({ item: ing.item, list });
+      items.push({ item: clean, list });
     });
   });
 
