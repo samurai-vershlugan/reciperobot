@@ -3197,7 +3197,7 @@ function renderGroceryList() {
       const _ck = ingCleanName(ing).toLowerCase();
       if (!seen.has(_ck)) {
         seen.add(_ck);
-        if (havePantryItem(ing.item)) { checkedIngredients[`${key}-${ing.item}`] = true; return; }
+        if (havePantryItem(ing.item) && !manualUnchecked.has(`${key}-${ing.item}`)) { checkedIngredients[`${key}-${ing.item}`] = true; return; }
         const itemKey = `${key}-${ing.item}`;
         const effectiveStore = getEffectiveStore(itemKey, ing);
         (byStore[effectiveStore] || byStore.tj).push({ ...ing, _effectiveStore: effectiveStore });
@@ -3221,7 +3221,7 @@ function renderGroceryList() {
         const itemKey = `${key}-${ing.item}`;
         const effectiveStore = getEffectiveStore(itemKey, ing);
         (byStore[effectiveStore] || byStore.tj).push({ ...ing, _effectiveStore: effectiveStore });
-        if (havePantryItem(ing.item)) checkedIngredients[itemKey] = true;
+        if (havePantryItem(ing.item) && !manualUnchecked.has(itemKey)) checkedIngredients[itemKey] = true;
       }
     });
   });
@@ -3319,6 +3319,7 @@ function renderGroceryList() {
 let storeOverrides = {};
 try { const _so = localStorage.getItem('mealos-store-overrides'); if (_so) storeOverrides = JSON.parse(_so); } catch(e) {}
 let buyQuantities = {}; // { weekKey-itemName: count to buy }
+const manualUnchecked = new Set(); // itemKeys the user explicitly unchecked this session
 
 const STORE_CYCLE = ['tj', 'costco', 'safeway', 'wf'];
 const STORE_LABELS = { tj:"TJ's", costco:'Costco', safeway:'Safeway', wf:'WF' };
@@ -3337,31 +3338,36 @@ function getEffectiveStore(itemKey, ing) {
 }
 
 
-async function toggleIngredient(itemKey, el) {
+async function toggleIngredient(itemKey, el, rawItem) {
   checkedIngredients[itemKey] = !checkedIngredients[itemKey];
   const checked = checkedIngredients[itemKey];
-  // Extract item name from itemKey (format: "w0-item name" or "w-1-item name")
-  const itemName = itemKey.replace(/^w-?\d+-/, '');
+  // Use the CLEAN name for pantry operations so add/remove are symmetric
+  const cleanName = rawItem ? ingCleanName({ item: rawItem }) : itemKey.replace(/^w-?\d+-/, '');
+  const pantryKey = cleanName.toLowerCase();
 
   if (checked) {
-    el.classList.add('checked');
-    el.querySelector('.ingredient-cb').textContent = '✓';
-    // Add to pantry — assume they have it henceforth
-    haveIngredients[itemName] = true;
+    if (el) { el.classList.add('checked'); const cb = el.querySelector('.ingredient-cb'); if (cb) cb.textContent = '✓'; }
+    haveIngredients[pantryKey] = true;
     try {
-      await sb.upsert('pantry', { family_id: FAMILY_ID, item_name: itemName, have_it: true }, 'family_id,item_name');
+      await sb.upsert('pantry', { family_id: FAMILY_ID, item_name: pantryKey, have_it: true }, 'family_id,item_name');
     } catch(e) {}
     persistHaveIngredients();
+    manualUnchecked.delete(itemKey);
   } else {
-    el.classList.remove('checked');
-    el.querySelector('.ingredient-cb').textContent = '';
-    // Remove from pantry — they need it again
-    delete haveIngredients[itemName];
+    manualUnchecked.add(itemKey);
+    if (el) { el.classList.remove('checked'); const cb = el.querySelector('.ingredient-cb'); if (cb) cb.textContent = ''; }
+    // Remove ALL pantry entries that match this clean name (covers old mismatched entries)
+    Object.keys(haveIngredients).forEach(function(k){
+      if (k.toLowerCase() === pantryKey || normalizeIngredient(k) === normalizeIngredient(cleanName)) {
+        delete haveIngredients[k];
+      }
+    });
     try {
-      await sb.delete('pantry', { family_id: FAMILY_ID, item_name: itemName });
+      await sb.delete('pantry', { family_id: FAMILY_ID, item_name: pantryKey });
     } catch(e) {}
     persistHaveIngredients();
   }
+  renderGroceryList();
   renderAlexaCommands();
   updateConfirmBar();
   persistWeekPlans();
