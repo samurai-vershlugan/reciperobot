@@ -3159,8 +3159,8 @@ async function renameGroceryItem(ing, currentName) {
   // Persist custom recipes to Supabase (match by sbId if available, else name)
   let saved = 0, failed = 0;
   for (const r of touchedRecipes) {
-    if (!r.custom) continue;
     const filter = r.sbId ? ('id=eq.' + r.sbId) : ('family_id=eq.' + FAMILY_ID + '&name=eq.' + encodeURIComponent(r.name));
+    console.log('  Persisting rename for recipe:', r.name, '| custom:', !!r.custom, '| sbId:', r.sbId, '| filter:', filter);
     try {
       const resp = await fetch(SUPABASE_URL + '/rest/v1/recipes?' + filter, {
         method: 'PATCH',
