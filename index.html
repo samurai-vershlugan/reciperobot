@@ -3306,6 +3306,7 @@ function changeStore(itemKey, newStore) {
   try { localStorage.setItem('mealos-store-overrides', JSON.stringify(storeOverrides)); } catch(e) {}
   renderGroceryList();
   renderAlexaCommands();
+  persistWeekPlans();
 }
 
 function getEffectiveStore(itemKey, ing) {
@@ -3339,7 +3340,7 @@ async function toggleIngredient(itemKey, el) {
     persistHaveIngredients();
   }
   renderAlexaCommands();
-  updateConfirmBar();
+  updateConfirmBar();  persistWeekPlans();
 }
 
 
@@ -5060,7 +5061,13 @@ async function persistWeekPlans() {
   const key = getWeekKey(currentWeekOffset);
   const plan = weekPlans[key] || [];
   const label = document.getElementById('weekLabel')?.textContent || '';
-  const grocery = buildGroceryByStore(key, plan);
+  // Grocery state for cross-device sync: checked items, store overrides, and extras for THIS week
+  const grocery = {
+    byStore: buildGroceryByStore(key, plan),
+    checked: Object.keys(checkedIngredients).filter(function(k){ return k.indexOf(key + '-') === 0 && checkedIngredients[k]; }),
+    overrides: Object.keys(storeOverrides).filter(function(k){ return k.indexOf(key + '-') === 0; }).reduce(function(o,k){ o[k]=storeOverrides[k]; return o; }, {}),
+    extras: extraGroceryItems[key] || []
+  };
   const weekStart = getWeekDates(currentWeekOffset)[0];
   const now = new Date(); now.setHours(0,0,0,0);
   const status = (weekStart < now && currentWeekOffset < 0) ? 'archived' : 'active';
@@ -5117,6 +5124,13 @@ async function loadWeekPlans() {
           // Only restore locks for past weeks — current week always starts unlocked
           if (row.locks_json && row.week_key !== currentKey) {
             Object.assign(lockedDays, row.locks_json);
+          }
+          // Restore grocery state (checked items, store overrides, extras) for cross-device sync
+          const g = row.grocery_json;
+          if (g && typeof g === 'object' && !Array.isArray(g)) {
+            if (Array.isArray(g.checked)) g.checked.forEach(function(k){ checkedIngredients[k] = true; });
+            if (g.overrides) Object.assign(storeOverrides, g.overrides);
+            if (Array.isArray(g.extras) && g.extras.length) extraGroceryItems[row.week_key] = g.extras;
           }
         }
       });
@@ -5187,7 +5201,13 @@ async function saveWeekSnapshot() {
   const draftName = prompt('Name this draft plan:', defaultLabel);
   if (draftName === null) return;
 
-  const grocery = buildGroceryByStore(key, plan);
+  // Grocery state for cross-device sync: checked items, store overrides, and extras for THIS week
+  const grocery = {
+    byStore: buildGroceryByStore(key, plan),
+    checked: Object.keys(checkedIngredients).filter(function(k){ return k.indexOf(key + '-') === 0 && checkedIngredients[k]; }),
+    overrides: Object.keys(storeOverrides).filter(function(k){ return k.indexOf(key + '-') === 0; }).reduce(function(o,k){ o[k]=storeOverrides[k]; return o; }, {}),
+    extras: extraGroceryItems[key] || []
+  };
   const label = draftName || defaultLabel;
 
   try {
