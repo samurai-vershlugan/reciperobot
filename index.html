@@ -2164,8 +2164,14 @@
         <button class="login-back" onclick="regenerateGroceryList()" title="Rebuild from planned recipes" style="font-size:10px">↻ Regenerate</button>
       </div>
       <div style="display:flex;gap:6px;margin-bottom:10px">
-        <input id="manualGroceryInput" class="login-input" type="text" placeholder="Add an item..." style="margin-bottom:0;flex:1;font-size:12px;padding:6px 10px" onkeydown="if(event.key==='Enter'){addManualGroceryItem(this.value.trim());this.value='';}" />
-        <button class="confirm-btn" onclick="var i=document.getElementById('manualGroceryInput');addManualGroceryItem(i.value.trim());i.value='';" style="padding:6px 12px">Add</button>
+        <input id="manualGroceryInput" class="login-input" type="text" placeholder="Add an item..." style="margin-bottom:0;flex:1;font-size:12px;padding:6px 10px" onkeydown="if(event.key==='Enter'){addManualGroceryItem(this.value.trim(), document.getElementById('manualGroceryStore').value);this.value='';}" />
+        <select id="manualGroceryStore" class="login-input" style="margin-bottom:0;flex:0 0 auto;font-size:12px;padding:6px 8px;background:var(--surface2);color:var(--text)">
+          <option value="tj">TJ's</option>
+          <option value="costco">Costco</option>
+          <option value="wf">WF</option>
+          <option value="safeway">Safeway</option>
+        </select>
+        <button class="confirm-btn" onclick="var i=document.getElementById('manualGroceryInput');addManualGroceryItem(i.value.trim(), document.getElementById('manualGroceryStore').value);i.value='';" style="padding:6px 12px">Add</button>
       </div>
       <div id="groceryList"></div>
     </div>
@@ -6342,7 +6348,8 @@ function robotAddToGrocery(items) {
 }
 
 // Manually add a single grocery item from a text box
-function addManualGroceryItem(rawName) {
+function addManualGroceryItem(rawName, store) {
+  if (!rawName) return;
   const key = getWeekKey(currentWeekOffset);
   if (!groceryLists[key]) groceryLists[key] = { items: [] };
   const list = groceryLists[key];
@@ -6352,7 +6359,7 @@ function addManualGroceryItem(rawName) {
   if (list.items.some(x => x.name.toLowerCase() === nk)) { showToast('Already on the list'); return; }
   list.items.push({
     key: nk, item: rawName, name: parts.name, amount: parts.amount,
-    store: 'tj', qty: 1, checked: false, sources: [], pinned: true, manual: true
+    store: store || 'tj', qty: 1, checked: false, sources: [], pinned: true, manual: true
   });
   persistGroceryLists();
   renderGroceryList();
