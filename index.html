@@ -2159,7 +2159,14 @@
 
   <div class="sidebar">
     <div class="sidebar-section">
-      <h3>🛒 Grocery List</h3>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px">
+        <h3 style="margin:0">🛒 Grocery List</h3>
+        <button class="login-back" onclick="regenerateGroceryList()" title="Rebuild from planned recipes" style="font-size:10px">↻ Regenerate</button>
+      </div>
+      <div style="display:flex;gap:6px;margin-bottom:10px">
+        <input id="manualGroceryInput" class="login-input" type="text" placeholder="Add an item..." style="margin-bottom:0;flex:1;font-size:12px;padding:6px 10px" onkeydown="if(event.key==='Enter'){addManualGroceryItem(this.value.trim());this.value='';}" />
+        <button class="confirm-btn" onclick="var i=document.getElementById('manualGroceryInput');addManualGroceryItem(i.value.trim());i.value='';" style="padding:6px 12px">Add</button>
+      </div>
       <div id="groceryList"></div>
     </div>
     <div class="sidebar-section">
@@ -3123,123 +3130,132 @@ function shopName(s) {
 // ─── GROCERY LIST ─────────────────────────────────────────────────────────────
 
 
-async function renameGroceryItem(ing, currentName) {
-  const newName = prompt('Rename grocery item:', currentName);
-  if (newName === null) return;
-  const trimmed = newName.trim();
-  if (!trimmed || trimmed === currentName) return;
 
-  await ensureFreshToken();
-  const oldItemText = ing.item;
-  const curLower = currentName.toLowerCase();
 
-  // Match helper: does this ingredient correspond to what the user clicked?
-  function matches(i) {
-    if (i.item === oldItemText) return true;
-    if (i.name && i.name.toLowerCase() === curLower) return true;
-    // Fall back to derived clean name comparison
-    const derived = ingCleanName(i).toLowerCase();
-    return derived === curLower;
-  }
+// ─── PERSISTENT GROCERY LIST ENGINE ────────────────────────────────────────────
+// groceryLists[weekKey] = { items: [ {key, item, name, amount, store, qty, checked, sources:[], pinned} ] }
+let groceryLists = {};
+try { const _gl = localStorage.getItem('mealos-grocery-lists'); if (_gl) groceryLists = JSON.parse(_gl); } catch(e) {}
 
-  // Update in-memory across ALL recipes (built-in and custom) by id when possible
-  let touchedRecipes = [];
-  let totalChanged = 0;
-  Object.values(RECIPES).flat().forEach(function(r) {
-    if (!r.ingredients) return;
-    let changed = false;
-    r.ingredients.forEach(function(i) {
-      if (matches(i)) { i.name = trimmed; changed = true; totalChanged++; }
-    });
-    if (changed) touchedRecipes.push(r);
-  });
-
-  console.log('Rename:', currentName, '->', trimmed, '| matched', totalChanged, 'ingredient(s) across', touchedRecipes.length, 'recipe(s)');
-
-  // Persist custom recipes to Supabase (match by sbId if available, else name)
-  let saved = 0, failed = 0;
-  for (const r of touchedRecipes) {
-    const filter = r.sbId ? ('id=eq.' + r.sbId + '&family_id=eq.' + FAMILY_ID) : ('family_id=eq.' + FAMILY_ID + '&name=eq.' + encodeURIComponent(r.name));
-    console.log('  Persisting rename for recipe:', r.name, '| custom:', !!r.custom, '| sbId:', r.sbId, '| filter:', filter);
-    try {
-      const resp = await fetch(SUPABASE_URL + '/rest/v1/recipes?' + filter, {
-        method: 'PATCH',
-        headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + AUTH_TOKEN, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
-        body: JSON.stringify({ ingredients_json: r.ingredients })
-      });
-      if (resp.ok) {
-        const updated = await resp.json();
-        console.log('  PATCH ok — rows updated:', Array.isArray(updated) ? updated.length : updated);
-        if (Array.isArray(updated) && updated.length === 0) { failed++; console.error('  ⚠ 0 rows updated (RLS or filter mismatch)'); }
-        else saved++;
-      } else { failed++; console.error('Rename PATCH failed', resp.status, await resp.text()); }
-    } catch(e) { failed++; console.warn('Rename persist error for', r.name, e); }
-  }
-
-  renderGroceryList();
-  renderAlexaCommands();
-  persistWeekPlans();
-
-  if (totalChanged === 0) {
-    showToast('Could not find that item to rename');
-  } else if (failed > 0) {
-    showToast('⚠ Renamed locally but ' + failed + ' save(s) failed — see console');
-  } else {
-    showToast('Renamed to "' + trimmed + '"');
-  }
+function persistGroceryLists() {
+  try { localStorage.setItem('mealos-grocery-lists', JSON.stringify(groceryLists)); } catch(e) {}
 }
 
-function renderGroceryList() {
-  const key = getWeekKey(currentWeekOffset);
+// Build the set of ingredients the current plan's recipes require
+function planIngredients(key) {
   const plan = weekPlans[key] || [];
-  
-  const byStore = { tj:[], costco:[], wf:[], safeway:[] };
-  const seen = new Set();
-
-  // Collect prep recipe ingredients first
+  const out = []; // { name, item, amount, store, recipe }
+  // Prep recipes
   getPrepRecipesForWeek(plan).forEach(pr => {
     (pr.ingredients || []).forEach(ing => {
-      const _ck = ingCleanName(ing).toLowerCase();
-      if (!seen.has(_ck)) {
-        seen.add(_ck);
-        if (havePantryItem(ing.item) && !manualUnchecked.has(`${key}-${ing.item}`)) { checkedIngredients[`${key}-${ing.item}`] = true; return; }
-        const itemKey = `${key}-${ing.item}`;
-        const effectiveStore = getEffectiveStore(itemKey, ing);
-        (byStore[effectiveStore] || byStore.tj).push({ ...ing, _effectiveStore: effectiveStore });
-      }
+      const parts = ing.name ? { name: ing.name, amount: ing.amount || '' } : parseIngredientParts(ing.item);
+      out.push({ name: parts.name, item: ing.item, amount: parts.amount, store: ing.store || 'tj', recipe: pr.name || 'Prep' });
     });
   });
-  
+  // Planned meals
   plan.forEach(meal => {
     if (!meal || !meal.name) return;
     const liveMeal = getAllRecipes().find(r => r.name === meal.name) || meal;
-    // Build ingredient list with selected protein first
     const mealIngs = [];
     const protein = meal.selectedProtein || (liveMeal.proteins ? liveMeal.proteins[0] : null);
     if (protein && protein.item) mealIngs.push(protein);
     (liveMeal.ingredients || []).forEach(ing => mealIngs.push(ing));
-
     mealIngs.forEach(ing => {
-      const cleanKey = ingCleanName(ing).toLowerCase();
-      if (!seen.has(cleanKey)) {
-        seen.add(cleanKey);
-        const itemKey = `${key}-${ing.item}`;
-        const effectiveStore = getEffectiveStore(itemKey, ing);
-        (byStore[effectiveStore] || byStore.tj).push({ ...ing, _effectiveStore: effectiveStore });
-        if (havePantryItem(ing.item) && !manualUnchecked.has(itemKey)) checkedIngredients[itemKey] = true;
-      }
+      const parts = ing.name ? { name: ing.name, amount: ing.amount || '' } : parseIngredientParts(ing.item);
+      out.push({ name: parts.name, item: ing.item, amount: parts.amount, store: ing.store || 'tj', recipe: meal.name });
     });
   });
+  return out;
+}
 
-  // Add manually-added extra items (e.g. from Recipe Robot)
-  (extraGroceryItems[key] || []).forEach(ex => {
-    if (!seen.has(ex.item)) {
-      seen.add(ex.item);
-      if (havePantryItem(ex.item)) { checkedIngredients[`${key}-${ex.item}`] = true; return; }
-      const itemKey = `${key}-${ex.item}`;
-      const effectiveStore = getEffectiveStore(itemKey, ex);
-      (byStore[effectiveStore] || byStore.tj).push({ ...ex, _effectiveStore: effectiveStore, _isExtra: true });
+// Reconcile the stored grocery list against the current plan
+// Adds new recipe items, removes orphaned recipe items (unless pinned or still needed)
+function syncGroceryList(key) {
+  if (!groceryLists[key]) groceryLists[key] = { items: [] };
+  const list = groceryLists[key];
+  const required = planIngredients(key);
+
+  // Group required by clean-name key
+  const reqByName = {};
+  required.forEach(r => {
+    const nk = r.name.toLowerCase();
+    if (!reqByName[nk]) reqByName[nk] = { name: r.name, item: r.item, amount: r.amount, store: r.store, recipes: new Set() };
+    reqByName[nk].recipes.add(r.recipe);
+  });
+
+  // Index existing items by clean-name key
+  const existingByName = {};
+  list.items.forEach(it => { existingByName[it.name.toLowerCase()] = it; });
+
+  // 1. Add or update recipe-sourced items
+  Object.keys(reqByName).forEach(nk => {
+    const req = reqByName[nk];
+    const sources = Array.from(req.recipes);
+    if (existingByName[nk]) {
+      // Update sources for non-pinned items (so removal logic knows who needs it)
+      const it = existingByName[nk];
+      if (!it.pinned) {
+        it.sources = sources;
+        // refresh amount/item from recipe if not edited
+        if (!it.pinned) { it.amount = req.amount; it.item = req.item; }
+      } else {
+        // pinned: keep user's name/amount but still track recipe sources for accuracy
+        it.sources = Array.from(new Set((it.sources || []).concat(sources)));
+      }
+    } else {
+      // New item from a recipe
+      list.items.push({
+        key: nk,
+        item: req.item,
+        name: req.name,
+        amount: req.amount,
+        store: req.store,
+        qty: 1,
+        checked: false,
+        sources: sources,
+        pinned: false,
+        manual: false
+      });
     }
+  });
+
+  // 2. Remove recipe-sourced items no longer required (unless pinned or manual)
+  list.items = list.items.filter(it => {
+    if (it.manual || it.pinned) return true; // user-owned, never auto-remove
+    if (reqByName[it.name.toLowerCase()]) return true; // still required
+    return false; // orphaned recipe item — drop it
+  });
+
+  persistGroceryLists();
+  persistWeekPlans();
+}
+
+function regenerateGroceryList(key) {
+  // Safety reset: wipe and rebuild from recipes (keeps manual extras)
+  if (!confirm('Regenerate this week\'s grocery list from your planned recipes? Manually added items are kept, but edits to recipe items will be reset.')) return;
+  const k = key || getWeekKey(currentWeekOffset);
+  const manualItems = (groceryLists[k] && groceryLists[k].items || []).filter(it => it.manual);
+  groceryLists[k] = { items: manualItems };
+  syncGroceryList(k);
+  renderGroceryList();
+  renderAlexaCommands();
+  showToast('Grocery list regenerated from recipes');
+}
+
+function renderGroceryList() {
+  const key = getWeekKey(currentWeekOffset);
+  syncGroceryList(key);
+  const list = groceryLists[key];
+
+  // Apply pantry auto-check (still connected to pantry)
+  list.items.forEach(it => {
+    if (havePantryItem(it.item || it.name) && !it.manualUnchecked) it.checked = true;
+  });
+
+  const byStore = { tj:[], costco:[], wf:[], safeway:[] };
+  list.items.forEach(it => {
+    const store = it.store || 'tj';
+    (byStore[store] || byStore.tj).push(it);
   });
 
   const el = document.getElementById('groceryList');
@@ -3258,51 +3274,41 @@ function renderGroceryList() {
     group.className = 'grocery-store-group';
     group.innerHTML = `<div class="store-name ${cls}"><span class="store-dot"></span>${label}</div>`;
 
-    // Sort: unchecked items first, then alphabetical by clean name
     byStore[sk].sort((a, b) => {
-      const aChecked = checkedIngredients[`${key}-${a.item}`] ? 1 : 0;
-      const bChecked = checkedIngredients[`${key}-${b.item}`] ? 1 : 0;
-      if (aChecked !== bChecked) return aChecked - bChecked;
-      const aName = (a.name || parseIngredientParts(a.item).name).toLowerCase();
-      const bName = (b.name || parseIngredientParts(b.item).name).toLowerCase();
-      return aName.localeCompare(bName);
+      const aC = a.checked ? 1 : 0, bC = b.checked ? 1 : 0;
+      if (aC !== bC) return aC - bC;
+      return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
     });
 
-    byStore[sk].forEach(ing => {
-      const itemKey = `${key}-${ing.item}`;
-      const checked = checkedIngredients[itemKey] ? 'checked' : '';
-      const isOverridden = !!storeOverrides[itemKey];
-      const parts = ing.name ? { amount: ing.amount || '', name: ing.name } : parseIngredientParts(ing.item);
+    byStore[sk].forEach(it => {
       const div = document.createElement('div');
-      div.className = `ingredient-item ${checked}`;
+      div.className = `ingredient-item ${it.checked ? 'checked' : ''}`;
 
-      // Checkbox toggles checked state
       const cbDiv = document.createElement('div');
       cbDiv.className = 'ingredient-cb';
-      cbDiv.textContent = checked ? '✓' : '';
-      cbDiv.onclick = (e) => { e.stopPropagation(); toggleIngredient(itemKey, div, ing.item); };
+      cbDiv.textContent = it.checked ? '✓' : '';
+      cbDiv.onclick = (e) => { e.stopPropagation(); toggleGroceryItem(it); };
       div.appendChild(cbDiv);
 
-      // Name — click to rename
       const nameSpan = document.createElement('span');
       nameSpan.className = 'ing-name ing-name-editable';
-      nameSpan.textContent = parts.name;
+      nameSpan.textContent = it.name;
       nameSpan.title = 'Click to rename';
-      if (parts.amount) {
+      if (it.amount) {
         const amt = document.createElement('span');
         amt.className = 'ing-amount';
-        amt.textContent = parts.amount;
+        amt.textContent = it.amount;
         nameSpan.appendChild(amt);
       }
-      nameSpan.onclick = (e) => { e.stopPropagation(); renameGroceryItem(ing, parts.name); };
+      nameSpan.onclick = (e) => { e.stopPropagation(); renameGroceryListItem(it); };
       div.appendChild(nameSpan);
 
-      // Buy-quantity stepper (how many to purchase) — independent of checkoff/pantry
-      div.appendChild(makeBuyQtyStepper(itemKey));
+      div.appendChild(makeGroceryQtyStepper(it));
+
       const sel = document.createElement('select');
-      sel.className = `store-select store-select-${sk}${isOverridden ? ' overridden' : ''}`;
+      sel.className = `store-select store-select-${sk}`;
       sel.onclick = (e) => e.stopPropagation();
-      sel.onchange = () => changeStore(itemKey, sel.value);
+      sel.onchange = () => { it.store = sel.value; it.pinned = true; persistGroceryLists(); persistWeekPlans(); renderGroceryList(); renderAlexaCommands(); };
       ['tj','costco','safeway','wf'].forEach(s => {
         const opt = document.createElement('option');
         opt.value = s; opt.textContent = STORE_LABELS[s];
@@ -3312,11 +3318,67 @@ function renderGroceryList() {
       div.appendChild(sel);
       group.appendChild(div);
     });
-    
     el.appendChild(group);
   });
 
   updateConfirmBar();
+}
+
+async function toggleGroceryItem(it) {
+  it.checked = !it.checked;
+  it.manualUnchecked = !it.checked;
+  // Stay connected to pantry
+  const pantryKey = (it.name || '').toLowerCase();
+  if (it.checked) {
+    haveIngredients[pantryKey] = true;
+    try { await sb.upsert('pantry', { family_id: FAMILY_ID, item_name: pantryKey, have_it: true }, 'family_id,item_name'); } catch(e) {}
+  } else {
+    Object.keys(haveIngredients).forEach(k => {
+      if (k.toLowerCase() === pantryKey || normalizeIngredient(k) === normalizeIngredient(it.name)) delete haveIngredients[k];
+    });
+    try { await sb.delete('pantry', { family_id: FAMILY_ID, item_name: pantryKey }); } catch(e) {}
+  }
+  persistHaveIngredients();
+  persistGroceryLists();
+  renderGroceryList();
+  renderAlexaCommands();
+  updateConfirmBar();
+  persistWeekPlans();
+}
+
+function renameGroceryListItem(it) {
+  const newName = prompt('Rename grocery item:', it.name);
+  if (newName === null) return;
+  const trimmed = newName.trim();
+  if (!trimmed || trimmed === it.name) return;
+  it.name = trimmed;
+  it.pinned = true; // editing pins it so recipe sync won't clobber
+  persistGroceryLists();
+  renderGroceryList();
+  renderAlexaCommands();
+  persistWeekPlans();
+  showToast('Renamed to "' + trimmed + '"');
+}
+
+function makeGroceryQtyStepper(it) {
+  const qty = (typeof it.qty === 'number' && it.qty > 0) ? it.qty : 1;
+  const wrap = document.createElement('span');
+  wrap.className = 'pantry-qty-stepper';
+  wrap.onclick = (e) => e.stopPropagation();
+  const minus = document.createElement('button');
+  minus.className = 'qty-btn';
+  minus.textContent = '\u2212';
+  minus.style.opacity = qty <= 1 ? '0.4' : '1';
+  minus.onclick = (e) => { e.stopPropagation(); it.qty = Math.max(1, qty - 1); it.pinned = true; persistGroceryLists(); persistWeekPlans(); renderGroceryList(); renderAlexaCommands(); };
+  const label = document.createElement('span');
+  label.className = 'qty-label';
+  label.textContent = qty;
+  const plus = document.createElement('button');
+  plus.className = 'qty-btn';
+  plus.textContent = '+';
+  plus.onclick = (e) => { e.stopPropagation(); it.qty = qty + 1; it.pinned = true; persistGroceryLists(); persistWeekPlans(); renderGroceryList(); renderAlexaCommands(); };
+  wrap.appendChild(minus); wrap.appendChild(label); wrap.appendChild(plus);
+  return wrap;
 }
 
 // ─── STORE OVERRIDES ─────────────────────────────────────────────────────────
@@ -3379,45 +3441,7 @@ async function toggleIngredient(itemKey, el, rawItem) {
 }
 
 
-async function migrateIngredientNames() {
-  await ensureFreshToken();
-  if (!FAMILY_ID || !AUTH_TOKEN) { console.error('Not logged in'); return; }
-  console.log('Fetching recipes...');
-  let rows;
-  try {
-    const resp = await fetch(SUPABASE_URL + '/rest/v1/recipes?family_id=eq.' + FAMILY_ID + '&select=id,name,ingredients_json', {
-      headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + AUTH_TOKEN }
-    });
-    rows = await resp.json();
-  } catch(e) { console.error('Fetch failed:', e); return; }
-  if (!Array.isArray(rows)) { console.error('Unexpected response:', rows); return; }
 
-  console.log('Migrating ' + rows.length + ' recipes...');
-  let updated = 0;
-  for (const row of rows) {
-    const ings = row.ingredients_json || [];
-    if (!ings.length) continue;
-    const newIngs = ings.map(function(ing) {
-      let itemText = typeof ing === 'string' ? ing : ing.item;
-      // Clean leading bullets from the stored item text too
-      itemText = itemText.replace(/^[\s*\-•·]+/, '').trim();
-      const store = (typeof ing === 'object' && ing.store) ? ing.store : 'tj';
-      const parsed = parseIngredientParts(itemText);
-      return { item: itemText, name: parsed.name, amount: parsed.amount, store: store };
-    });
-    try {
-      const up = await fetch(SUPABASE_URL + '/rest/v1/recipes?id=eq.' + row.id, {
-        method: 'PATCH',
-        headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + AUTH_TOKEN, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-        body: JSON.stringify({ ingredients_json: newIngs })
-      });
-      if (up.ok) { updated++; console.log('  ✓ ' + row.name); }
-      else { console.warn('  ✗ ' + row.name + ' (' + up.status + ')'); }
-    } catch(e) { console.warn('  ✗ ' + row.name, e); }
-  }
-  console.log('Done! Updated ' + updated + '/' + rows.length + ' recipes. Refresh to see changes.');
-  showToast('Migrated ' + updated + ' recipes');
-}
 
 function ingCleanName(ing) {
   if (ing && ing.name) return ing.name;
@@ -5159,14 +5183,8 @@ async function persistWeekPlans() {
   const key = getWeekKey(currentWeekOffset);
   const plan = weekPlans[key] || [];
   const label = document.getElementById('weekLabel')?.textContent || '';
-  // Grocery state for cross-device sync: checked items, store overrides, and extras for THIS week
-  const grocery = {
-    byStore: buildGroceryByStore(key, plan),
-    checked: Object.keys(checkedIngredients).filter(function(k){ return k.indexOf(key + '-') === 0 && checkedIngredients[k]; }),
-    overrides: Object.keys(storeOverrides).filter(function(k){ return k.indexOf(key + '-') === 0; }).reduce(function(o,k){ o[k]=storeOverrides[k]; return o; }, {}),
-    buyQty: Object.keys(buyQuantities).filter(function(k){ return k.indexOf(key + '-') === 0; }).reduce(function(o,k){ o[k]=buyQuantities[k]; return o; }, {}),
-    extras: extraGroceryItems[key] || []
-  };
+  // Persistent grocery list for cross-device sync
+  const grocery = (groceryLists[key] && groceryLists[key].items) ? { items: groceryLists[key].items } : { items: [] };
   const weekStart = getWeekDates(currentWeekOffset)[0];
   const now = new Date(); now.setHours(0,0,0,0);
   const status = (weekStart < now && currentWeekOffset < 0) ? 'archived' : 'active';
@@ -5224,13 +5242,10 @@ async function loadWeekPlans() {
           if (row.locks_json && row.week_key !== currentKey) {
             Object.assign(lockedDays, row.locks_json);
           }
-          // Restore grocery state (checked items, store overrides, extras) for cross-device sync
+          // Restore persistent grocery list for cross-device sync
           const g = row.grocery_json;
-          if (g && typeof g === 'object' && !Array.isArray(g)) {
-            if (Array.isArray(g.checked)) g.checked.forEach(function(k){ checkedIngredients[k] = true; });
-            if (g.overrides) Object.assign(storeOverrides, g.overrides);
-            if (g.buyQty) Object.assign(buyQuantities, g.buyQty);
-            if (Array.isArray(g.extras) && g.extras.length) extraGroceryItems[row.week_key] = g.extras;
+          if (g && typeof g === 'object' && Array.isArray(g.items)) {
+            groceryLists[row.week_key] = { items: g.items };
           }
         }
       });
@@ -5301,14 +5316,8 @@ async function saveWeekSnapshot() {
   const draftName = prompt('Name this draft plan:', defaultLabel);
   if (draftName === null) return;
 
-  // Grocery state for cross-device sync: checked items, store overrides, and extras for THIS week
-  const grocery = {
-    byStore: buildGroceryByStore(key, plan),
-    checked: Object.keys(checkedIngredients).filter(function(k){ return k.indexOf(key + '-') === 0 && checkedIngredients[k]; }),
-    overrides: Object.keys(storeOverrides).filter(function(k){ return k.indexOf(key + '-') === 0; }).reduce(function(o,k){ o[k]=storeOverrides[k]; return o; }, {}),
-    buyQty: Object.keys(buyQuantities).filter(function(k){ return k.indexOf(key + '-') === 0; }).reduce(function(o,k){ o[k]=buyQuantities[k]; return o; }, {}),
-    extras: extraGroceryItems[key] || []
-  };
+  // Persistent grocery list for cross-device sync
+  const grocery = (groceryLists[key] && groceryLists[key].items) ? { items: groceryLists[key].items } : { items: [] };
   const label = draftName || defaultLabel;
 
   try {
@@ -6309,22 +6318,47 @@ function buildRobotNewCard(r) {
 
 function robotAddToGrocery(items) {
   const key = getWeekKey(currentWeekOffset);
-  if (!extraGroceryItems[key]) extraGroceryItems[key] = [];
+  if (!groceryLists[key]) groceryLists[key] = { items: [] };
+  const list = groceryLists[key];
   let added = 0;
   items.forEach(item => {
-    const name = typeof item === 'string' ? item : item.item;
-    if (!name) return;
-    // Skip if already a manual extra or already in pantry
-    const exists = extraGroceryItems[key].some(x => x.item.toLowerCase() === name.toLowerCase());
-    if (exists || havePantryItem(name)) return;
-    extraGroceryItems[key].push({ item: name, store: 'tj' });
+    const raw = typeof item === 'string' ? item : item.item;
+    if (!raw) return;
+    const parts = parseIngredientParts(raw);
+    const nk = parts.name.toLowerCase();
+    const exists = list.items.some(x => x.name.toLowerCase() === nk);
+    if (exists || havePantryItem(raw)) return;
+    list.items.push({
+      key: nk, item: raw, name: parts.name, amount: parts.amount,
+      store: 'tj', qty: 1, checked: false, sources: [], pinned: true, manual: true
+    });
     added++;
   });
-  try { localStorage.setItem('mealos-extras', JSON.stringify(extraGroceryItems)); } catch(e) {}
+  persistGroceryLists();
   showToast(added ? `Added ${added} item${added>1?'s':''} to grocery list` : 'Those are already covered');
   renderGroceryList();
   renderAlexaCommands();
   persistWeekPlans();
+}
+
+// Manually add a single grocery item from a text box
+function addManualGroceryItem(rawName) {
+  const key = getWeekKey(currentWeekOffset);
+  if (!groceryLists[key]) groceryLists[key] = { items: [] };
+  const list = groceryLists[key];
+  const parts = parseIngredientParts(rawName);
+  if (!parts.name) return;
+  const nk = parts.name.toLowerCase();
+  if (list.items.some(x => x.name.toLowerCase() === nk)) { showToast('Already on the list'); return; }
+  list.items.push({
+    key: nk, item: rawName, name: parts.name, amount: parts.amount,
+    store: 'tj', qty: 1, checked: false, sources: [], pinned: true, manual: true
+  });
+  persistGroceryLists();
+  renderGroceryList();
+  renderAlexaCommands();
+  persistWeekPlans();
+  showToast('Added "' + parts.name + '"');
 }
 
 let robotAssignRecipeName = null;
