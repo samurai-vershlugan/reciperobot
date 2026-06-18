@@ -6938,7 +6938,7 @@ function openDiscoverEditModal(r) {
           </div>
         </details>
 
-        <label class="input-label">Ingredients <span style="opacity:0.5;font-size:9px">(one per line, format: ingredient, store)</span></label>
+        <label class="input-label">Ingredients <span style="opacity:0.5;font-size:9px">(one per line)</span></label>
         <textarea id="deIngredients" style="width:100%;box-sizing:border-box;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'DM Mono',monospace;font-size:11px;padding:10px;min-height:160px;resize:vertical;outline:none;margin-bottom:10px"></textarea>
         <label class="input-label">Steps <span style="opacity:0.5;font-size:9px">(one per line)</span></label>
         <textarea id="deSteps" style="width:100%;box-sizing:border-box;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:12px;padding:10px;min-height:120px;resize:vertical;outline:none;margin-bottom:10px"></textarea>
@@ -6963,7 +6963,7 @@ function openDiscoverEditModal(r) {
   document.getElementById('deRecipeName').value = r.name || '';
   // category now derived from cuisine/type selections
   document.getElementById('deIngredients').value = (r.ingredients || [])
-    .map(i => typeof i === 'string' ? `${i}, tj` : `${i.item}, ${i.store || 'tj'}`)
+    .map(i => typeof i === 'string' ? i : i.item)
     .join('\n');
   document.getElementById('deSteps').value = (r.steps || []).join('\n');
   document.getElementById('deUrl').value = r.url || '';
@@ -7071,19 +7071,11 @@ async function confirmDiscoverEdit() {
     .split('\n').map(l => l.trim()).filter(Boolean);
   const url = document.getElementById('deUrl').value.trim();
 
-  const STORE_CODES = ['tj','costco','wf','safeway'];
   const ingredients = ingredientLines.map(line => {
-    const parts = line.split(',').map(p => p.trim());
-    // Last part is the store ONLY if it's a known store code
-    let store = 'tj';
-    let item = line.trim();
-    if (parts.length > 1 && STORE_CODES.includes(parts[parts.length-1].toLowerCase())) {
-      store = parts[parts.length-1].toLowerCase();
-      item = parts.slice(0, -1).join(', ').trim();
-    }
+    const item = line.trim();
     // Auto-derive clean name + amount for grocery/pantry matching
     const parsed = parseIngredientParts(item);
-    return { item: item, name: parsed.name, amount: parsed.amount, store: store };
+    return { item: item, name: parsed.name, amount: parsed.amount, store: DEFAULT_STORE };
   });
 
   const recipe = {
