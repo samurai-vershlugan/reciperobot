@@ -6141,6 +6141,7 @@ function analyzeLibraryLocally() {
 }
 
 async function runRobot() {
+  await ensureFreshToken();
   var pantrySize = Object.keys(haveIngredients).filter(function(k) { return haveIngredients[k]; }).length;
   if (pantrySize === 0 && robotSelected.size === 0) { showToast('Add some pantry items first!'); return; }
 
@@ -6439,6 +6440,7 @@ async function runDiscover() {
   const btn = document.getElementById('discoverRunBtn');
   const resultsEl = document.getElementById('discoverResults');
 
+  await ensureFreshToken();
   btn.disabled = true;
   resultsEl.innerHTML = `
     <div class="discover-loading">
@@ -6613,6 +6615,7 @@ function renderDiscoverResults(recipes) {
 let importInProgress = false;
 
 async function importDiscoverRecipe(r, btnEl) {
+  await ensureFreshToken();
   if (importInProgress) {
     showToast('Hang on — finishing the current import first');
     return;
@@ -6921,6 +6924,7 @@ function onDeUrlChange() {
 }
 
 async function importRecipeFromUrl() {
+  await ensureFreshToken();
   const url = document.getElementById('deUrl').value.trim();
   if (!url) { showToast('Paste a recipe URL first'); return; }
   if (!/^https?:\/\//.test(url)) { showToast('Enter a valid URL (https://...)'); return; }
