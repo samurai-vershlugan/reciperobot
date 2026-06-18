@@ -4511,14 +4511,11 @@ function renderRecipeIngredients(recipe, selectedProtein) {
   }
 
   allIngs.forEach(ing => {
-    const storeClass = STORE_CLASSES[ing.store] || 'tj';
-    const storeLabel = STORE_LABELS[ing.store] || "TJ's";
     const row = document.createElement('div');
     row.className = 'recipe-ing-row';
     row.innerHTML = `
       <span class="recipe-ing-bullet">•</span>
       <span class="recipe-ing-name">${ing.item}</span>
-      <span class="recipe-ing-store store-pill-${storeClass}">${storeLabel}</span>
     `;
     ingEl.appendChild(row);
   });
