@@ -3159,6 +3159,7 @@ async function renameGroceryItem(ing, currentName) {
 
   renderGroceryList();
   renderAlexaCommands();
+  persistWeekPlans();
   showToast('Renamed to "' + trimmed + '"');
 }
 
@@ -3488,6 +3489,7 @@ async function updatePantryQty(itemName, newQty) {
   }
   persistHaveIngredients();
   renderGroceryList();
+  persistWeekPlans();
   const pm = document.getElementById('pantryModal');
   if (pm && pm.classList.contains('open')) renderPantryItems();
 }
@@ -6222,6 +6224,7 @@ function robotAddToGrocery(items) {
   showToast(added ? `Added ${added} item${added>1?'s':''} to grocery list` : 'Those are already covered');
   renderGroceryList();
   renderAlexaCommands();
+  persistWeekPlans();
 }
 
 let robotAssignRecipeName = null;
