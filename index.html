@@ -3159,15 +3159,20 @@ async function renameGroceryItem(ing, currentName) {
   // Persist custom recipes to Supabase (match by sbId if available, else name)
   let saved = 0, failed = 0;
   for (const r of touchedRecipes) {
-    const filter = r.sbId ? ('id=eq.' + r.sbId) : ('family_id=eq.' + FAMILY_ID + '&name=eq.' + encodeURIComponent(r.name));
+    const filter = r.sbId ? ('id=eq.' + r.sbId + '&family_id=eq.' + FAMILY_ID) : ('family_id=eq.' + FAMILY_ID + '&name=eq.' + encodeURIComponent(r.name));
     console.log('  Persisting rename for recipe:', r.name, '| custom:', !!r.custom, '| sbId:', r.sbId, '| filter:', filter);
     try {
       const resp = await fetch(SUPABASE_URL + '/rest/v1/recipes?' + filter, {
         method: 'PATCH',
-        headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + AUTH_TOKEN, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+        headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + AUTH_TOKEN, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
         body: JSON.stringify({ ingredients_json: r.ingredients })
       });
-      if (resp.ok) saved++; else { failed++; console.error('Rename PATCH failed', resp.status, await resp.text()); }
+      if (resp.ok) {
+        const updated = await resp.json();
+        console.log('  PATCH ok — rows updated:', Array.isArray(updated) ? updated.length : updated);
+        if (Array.isArray(updated) && updated.length === 0) { failed++; console.error('  ⚠ 0 rows updated (RLS or filter mismatch)'); }
+        else saved++;
+      } else { failed++; console.error('Rename PATCH failed', resp.status, await resp.text()); }
     } catch(e) { failed++; console.warn('Rename persist error for', r.name, e); }
   }
 
