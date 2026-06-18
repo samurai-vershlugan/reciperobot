@@ -2163,15 +2163,15 @@
         <h3 style="margin:0">🛒 Grocery List</h3>
         <button class="login-back" onclick="regenerateGroceryList()" title="Rebuild from planned recipes" style="font-size:10px">↻ Regenerate</button>
       </div>
-      <div style="display:flex;gap:6px;margin-bottom:10px">
-        <input id="manualGroceryInput" class="login-input" type="text" placeholder="Add an item..." style="margin-bottom:0;flex:1;font-size:12px;padding:6px 10px" onkeydown="if(event.key==='Enter'){addManualGroceryItem(this.value.trim(), document.getElementById('manualGroceryStore').value);this.value='';}" />
-        <select id="manualGroceryStore" class="login-input" style="margin-bottom:0;flex:0 0 auto;font-size:12px;padding:6px 8px;background:var(--surface2);color:var(--text)">
+      <div style="display:flex;gap:5px;margin-bottom:10px;align-items:center">
+        <input id="manualGroceryInput" class="login-input" type="text" placeholder="Add an item..." style="margin-bottom:0;flex:1 1 auto;min-width:0;font-size:12px;padding:6px 10px" onkeydown="if(event.key==='Enter'){addManualGroceryItem(this.value.trim(), document.getElementById('manualGroceryStore').value);this.value='';}" />
+        <select id="manualGroceryStore" class="login-input" style="margin-bottom:0;flex:0 0 64px;width:64px;font-size:11px;padding:6px 4px;background:var(--surface2);color:var(--text)">
           <option value="tj">TJ's</option>
           <option value="costco">Costco</option>
           <option value="wf">WF</option>
-          <option value="safeway">Safeway</option>
+          <option value="safeway">Safe</option>
         </select>
-        <button class="confirm-btn" onclick="var i=document.getElementById('manualGroceryInput');addManualGroceryItem(i.value.trim(), document.getElementById('manualGroceryStore').value);i.value='';" style="padding:6px 12px">Add</button>
+        <button class="confirm-btn" onclick="var i=document.getElementById('manualGroceryInput');addManualGroceryItem(i.value.trim(), document.getElementById('manualGroceryStore').value);i.value='';" style="flex:0 0 auto;padding:6px 10px">Add</button>
       </div>
       <div id="groceryList"></div>
     </div>
