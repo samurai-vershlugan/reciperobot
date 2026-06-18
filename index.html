@@ -3292,8 +3292,8 @@ function renderGroceryList() {
       nameSpan.onclick = (e) => { e.stopPropagation(); renameGroceryItem(ing, parts.name); };
       div.appendChild(nameSpan);
 
-      // Quantity stepper on EVERY item for consistency
-      div.appendChild(makePantryQtyStepper(parts.name.toLowerCase()));
+      // Buy-quantity stepper (how many to purchase) — independent of checkoff/pantry
+      div.appendChild(makeBuyQtyStepper(itemKey));
       const sel = document.createElement('select');
       sel.className = `store-select store-select-${sk}${isOverridden ? ' overridden' : ''}`;
       sel.onclick = (e) => e.stopPropagation();
@@ -3318,6 +3318,7 @@ function renderGroceryList() {
 // Keyed by weekKey-itemName, value is store override string
 let storeOverrides = {};
 try { const _so = localStorage.getItem('mealos-store-overrides'); if (_so) storeOverrides = JSON.parse(_so); } catch(e) {}
+let buyQuantities = {}; // { weekKey-itemName: count to buy }
 
 const STORE_CYCLE = ['tj', 'costco', 'safeway', 'wf'];
 const STORE_LABELS = { tj:"TJ's", costco:'Costco', safeway:'Safeway', wf:'WF' };
@@ -3476,6 +3477,43 @@ function pantryQtyOf(itemName) {
   const v = haveIngredients[itemName];
   if (v && typeof v === 'object') return parseInt(v.qty) || 0;
   return 0;
+}
+
+function buyQtyOf(itemKey) {
+  const v = buyQuantities[itemKey];
+  return (typeof v === 'number' && v > 0) ? v : 1; // default 1
+}
+
+function makeBuyQtyStepper(itemKey) {
+  const qty = buyQtyOf(itemKey);
+  const wrap = document.createElement('span');
+  wrap.className = 'pantry-qty-stepper';
+  wrap.onclick = (e) => e.stopPropagation();
+
+  const minus = document.createElement('button');
+  minus.className = 'qty-btn';
+  minus.textContent = '\u2212';
+  minus.style.opacity = qty <= 1 ? '0.4' : '1';
+  minus.onclick = (e) => { e.stopPropagation(); setBuyQty(itemKey, Math.max(1, qty - 1)); };
+
+  const label = document.createElement('span');
+  label.className = 'qty-label';
+  label.textContent = qty;
+
+  const plus = document.createElement('button');
+  plus.className = 'qty-btn';
+  plus.textContent = '+';
+  plus.onclick = (e) => { e.stopPropagation(); setBuyQty(itemKey, qty + 1); };
+
+  wrap.appendChild(minus); wrap.appendChild(label); wrap.appendChild(plus);
+  return wrap;
+}
+
+function setBuyQty(itemKey, n) {
+  buyQuantities[itemKey] = n;
+  renderGroceryList();
+  renderAlexaCommands();
+  persistWeekPlans();
 }
 
 function makePantryQtyStepper(itemName) {
@@ -5090,6 +5128,7 @@ async function persistWeekPlans() {
     byStore: buildGroceryByStore(key, plan),
     checked: Object.keys(checkedIngredients).filter(function(k){ return k.indexOf(key + '-') === 0 && checkedIngredients[k]; }),
     overrides: Object.keys(storeOverrides).filter(function(k){ return k.indexOf(key + '-') === 0; }).reduce(function(o,k){ o[k]=storeOverrides[k]; return o; }, {}),
+    buyQty: Object.keys(buyQuantities).filter(function(k){ return k.indexOf(key + '-') === 0; }).reduce(function(o,k){ o[k]=buyQuantities[k]; return o; }, {}),
     extras: extraGroceryItems[key] || []
   };
   const weekStart = getWeekDates(currentWeekOffset)[0];
@@ -5154,6 +5193,7 @@ async function loadWeekPlans() {
           if (g && typeof g === 'object' && !Array.isArray(g)) {
             if (Array.isArray(g.checked)) g.checked.forEach(function(k){ checkedIngredients[k] = true; });
             if (g.overrides) Object.assign(storeOverrides, g.overrides);
+            if (g.buyQty) Object.assign(buyQuantities, g.buyQty);
             if (Array.isArray(g.extras) && g.extras.length) extraGroceryItems[row.week_key] = g.extras;
           }
         }
@@ -5230,6 +5270,7 @@ async function saveWeekSnapshot() {
     byStore: buildGroceryByStore(key, plan),
     checked: Object.keys(checkedIngredients).filter(function(k){ return k.indexOf(key + '-') === 0 && checkedIngredients[k]; }),
     overrides: Object.keys(storeOverrides).filter(function(k){ return k.indexOf(key + '-') === 0; }).reduce(function(o,k){ o[k]=storeOverrides[k]; return o; }, {}),
+    buyQty: Object.keys(buyQuantities).filter(function(k){ return k.indexOf(key + '-') === 0; }).reduce(function(o,k){ o[k]=buyQuantities[k]; return o; }, {}),
     extras: extraGroceryItems[key] || []
   };
   const label = draftName || defaultLabel;
