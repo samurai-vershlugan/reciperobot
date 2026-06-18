@@ -1145,17 +1145,14 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 8px 10px;
+    padding: 6px 10px;
     border-radius: 6px;
-    border: 1px solid transparent;
-    transition: all 0.12s;
-    cursor: pointer;
-    user-select: none;
   }
-  .recipe-ing-row:hover { background: var(--surface2); border-color: var(--border); }
-  .recipe-ing-row.have-it {
-    opacity: 0.45;
-    text-decoration: line-through;
+  .recipe-ing-bullet {
+    color: var(--accent);
+    font-size: 16px;
+    line-height: 1;
+    flex: 0 0 auto;
   }
   .recipe-ing-checkbox {
     width: 16px;
@@ -4514,17 +4511,15 @@ function renderRecipeIngredients(recipe, selectedProtein) {
   }
 
   allIngs.forEach(ing => {
-    const have = havePantryItem(ing.item);
-    const storeClass = STORE_PILL[ing.store] || 'tj';
-    const storeLabel = ing.store === 'costco' ? 'Costco' : ing.store === 'wf' ? 'WF' : ing.store === 'safeway' ? 'Safeway' : "TJ's";
+    const storeClass = STORE_CLASSES[ing.store] || 'tj';
+    const storeLabel = STORE_LABELS[ing.store] || "TJ's";
     const row = document.createElement('div');
-    row.className = `recipe-ing-row${have ? ' have-it' : ''}`;
+    row.className = 'recipe-ing-row';
     row.innerHTML = `
-      <div class="recipe-ing-checkbox">${have ? '✓' : ''}</div>
+      <span class="recipe-ing-bullet">•</span>
       <span class="recipe-ing-name">${ing.item}</span>
       <span class="recipe-ing-store store-pill-${storeClass}">${storeLabel}</span>
     `;
-    row.addEventListener('click', () => toggleHaveIngredient(ing.item, row));
     ingEl.appendChild(row);
   });
 }
