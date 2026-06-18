@@ -5022,19 +5022,44 @@ async function signOut() {
 async function ensureFreshToken() {
   try {
     const raw = localStorage.getItem('mealos-session');
-    if (!raw) return;
+    if (!raw) { handleSessionExpired(); return false; }
     const session = JSON.parse(raw);
-    if (!session) return;
+    if (!session) { handleSessionExpired(); return false; }
     // Refresh if within 60s of expiry or already expired
     if (Date.now() >= session.expires_at - 60000) {
       const fresh = await refreshSessionIfNeeded(session);
       if (fresh) {
         AUTH_TOKEN = fresh.access_token;
         currentUser = fresh.user;
+        return true;
+      } else {
+        // Refresh token is dead — clean logout to login screen
+        handleSessionExpired();
+        return false;
       }
     }
-  } catch(e) { console.warn('Token refresh check failed:', e); }
+    return true;
+  } catch(e) {
+    console.warn('Token refresh check failed:', e);
+    return true; // don't force logout on a transient error
+  }
 }
+
+let _sessionExpiredShown = false;
+function handleSessionExpired() {
+  if (_sessionExpiredShown) return;
+  _sessionExpiredShown = true;
+  AUTH_TOKEN = null;
+  currentUser = null;
+  try { localStorage.removeItem('mealos-session'); } catch(e) {}
+  showToast('Your session expired — please sign in again');
+  setTimeout(function() { showLoginScreen(); }, 1200);
+}
+
+// Weekly proactive refresh failsafe: check token every 30 min while app is open
+setInterval(function() {
+  ensureFreshToken();
+}, 30 * 60 * 1000);
 
 async function refreshSessionIfNeeded(session) {
   if (!session) return null;
