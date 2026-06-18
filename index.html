@@ -3131,36 +3131,57 @@ async function renameGroceryItem(ing, currentName) {
 
   await ensureFreshToken();
   const oldItemText = ing.item;
+  const curLower = currentName.toLowerCase();
 
-  // Update in-memory across all recipes that use this ingredient
+  // Match helper: does this ingredient correspond to what the user clicked?
+  function matches(i) {
+    if (i.item === oldItemText) return true;
+    if (i.name && i.name.toLowerCase() === curLower) return true;
+    // Fall back to derived clean name comparison
+    const derived = ingCleanName(i).toLowerCase();
+    return derived === curLower;
+  }
+
+  // Update in-memory across ALL recipes (built-in and custom) by id when possible
   let touchedRecipes = [];
+  let totalChanged = 0;
   Object.values(RECIPES).flat().forEach(function(r) {
     if (!r.ingredients) return;
     let changed = false;
     r.ingredients.forEach(function(i) {
-      if (i.item === oldItemText || (i.name && i.name.toLowerCase() === currentName.toLowerCase())) {
-        i.name = trimmed;
-        changed = true;
-      }
+      if (matches(i)) { i.name = trimmed; changed = true; totalChanged++; }
     });
-    if (changed && r.custom) touchedRecipes.push(r);
+    if (changed) touchedRecipes.push(r);
   });
 
-  // Persist to Supabase for each affected custom recipe
+  console.log('Rename:', currentName, '->', trimmed, '| matched', totalChanged, 'ingredient(s) across', touchedRecipes.length, 'recipe(s)');
+
+  // Persist custom recipes to Supabase (match by sbId if available, else name)
+  let saved = 0, failed = 0;
   for (const r of touchedRecipes) {
+    if (!r.custom) continue;
+    const filter = r.sbId ? ('id=eq.' + r.sbId) : ('family_id=eq.' + FAMILY_ID + '&name=eq.' + encodeURIComponent(r.name));
     try {
-      await fetch(SUPABASE_URL + '/rest/v1/recipes?family_id=eq.' + FAMILY_ID + '&name=eq.' + encodeURIComponent(r.name), {
+      const resp = await fetch(SUPABASE_URL + '/rest/v1/recipes?' + filter, {
         method: 'PATCH',
         headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + AUTH_TOKEN, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
         body: JSON.stringify({ ingredients_json: r.ingredients })
       });
-    } catch(e) { console.warn('Rename persist failed for', r.name, e); }
+      if (resp.ok) saved++; else { failed++; console.error('Rename PATCH failed', resp.status, await resp.text()); }
+    } catch(e) { failed++; console.warn('Rename persist error for', r.name, e); }
   }
 
   renderGroceryList();
   renderAlexaCommands();
   persistWeekPlans();
-  showToast('Renamed to "' + trimmed + '"');
+
+  if (totalChanged === 0) {
+    showToast('Could not find that item to rename');
+  } else if (failed > 0) {
+    showToast('⚠ Renamed locally but ' + failed + ' save(s) failed — see console');
+  } else {
+    showToast('Renamed to "' + trimmed + '"');
+  }
 }
 
 function renderGroceryList() {
