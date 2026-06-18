@@ -2165,12 +2165,7 @@
       </div>
       <div style="display:flex;gap:5px;margin-bottom:10px;align-items:center">
         <input id="manualGroceryInput" class="login-input" type="text" placeholder="Add an item..." style="margin-bottom:0;flex:1 1 auto;min-width:0;font-size:12px;padding:6px 10px" onkeydown="if(event.key==='Enter'){addManualGroceryItem(this.value.trim(), document.getElementById('manualGroceryStore').value);this.value='';}" />
-        <select id="manualGroceryStore" class="login-input" style="margin-bottom:0;flex:0 0 64px;width:64px;font-size:11px;padding:6px 4px;background:var(--surface2);color:var(--text)">
-          <option value="tj">TJ's</option>
-          <option value="costco">Costco</option>
-          <option value="wf">WF</option>
-          <option value="safeway">Safe</option>
-        </select>
+        <select id="manualGroceryStore" class="login-input" style="margin-bottom:0;flex:0 0 64px;width:64px;font-size:11px;padding:6px 4px;background:var(--surface2);color:var(--text)"></select>
         <button class="confirm-btn" onclick="var i=document.getElementById('manualGroceryInput');addManualGroceryItem(i.value.trim(), document.getElementById('manualGroceryStore').value);i.value='';" style="flex:0 0 auto;padding:6px 10px">Add</button>
       </div>
       <div id="groceryList"></div>
@@ -3248,8 +3243,19 @@ function regenerateGroceryList(key) {
   showToast('Grocery list regenerated from recipes');
 }
 
+function populateManualStoreDropdown() {
+  const sel = document.getElementById('manualGroceryStore');
+  if (!sel || sel.options.length) return;
+  STORES.forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s.id; opt.textContent = s.short;
+    sel.appendChild(opt);
+  });
+}
+
 function renderGroceryList() {
   const key = getWeekKey(currentWeekOffset);
+  populateManualStoreDropdown();
   syncGroceryList(key);
   const list = groceryLists[key];
 
@@ -3258,7 +3264,7 @@ function renderGroceryList() {
     if (havePantryItem(it.item || it.name) && !it.manualUnchecked) it.checked = true;
   });
 
-  const byStore = { tj:[], costco:[], wf:[], safeway:[] };
+  const byStore = {}; STORES.forEach(s => byStore[s.id] = []);
   list.items.forEach(it => {
     const store = it.store || 'tj';
     (byStore[store] || byStore.tj).push(it);
@@ -3267,12 +3273,7 @@ function renderGroceryList() {
   const el = document.getElementById('groceryList');
   el.innerHTML = '';
 
-  const storeOrder = [
-    { key:'tj', label:"Trader Joes", cls:'tj' },
-    { key:'costco', label:'Costco', cls:'costco' },
-    { key:'wf', label:'Whole Foods', cls:'wf' },
-    { key:'safeway', label:'Safeway', cls:'safeway' },
-  ];
+  const storeOrder = STORES.map(s => ({ key: s.id, label: s.full, cls: s.cls }));
 
   storeOrder.forEach(({ key: sk, label, cls }) => {
     if (byStore[sk].length === 0) return;
@@ -3315,10 +3316,10 @@ function renderGroceryList() {
       sel.className = `store-select store-select-${sk}`;
       sel.onclick = (e) => e.stopPropagation();
       sel.onchange = () => { it.store = sel.value; it.pinned = true; persistGroceryLists(); persistWeekPlans(); renderGroceryList(); renderAlexaCommands(); };
-      ['tj','costco','safeway','wf'].forEach(s => {
+      STORES.forEach(s => {
         const opt = document.createElement('option');
-        opt.value = s; opt.textContent = STORE_LABELS[s];
-        if (sk === s) opt.selected = true;
+        opt.value = s.id; opt.textContent = s.label;
+        if (sk === s.id) opt.selected = true;
         sel.appendChild(opt);
       });
       div.appendChild(sel);
@@ -3394,9 +3395,20 @@ try { const _so = localStorage.getItem('mealos-store-overrides'); if (_so) store
 let buyQuantities = {}; // { weekKey-itemName: count to buy }
 const manualUnchecked = new Set(); // itemKeys the user explicitly unchecked this session
 
-const STORE_CYCLE = ['tj', 'costco', 'safeway', 'wf'];
-const STORE_LABELS = { tj:"TJ's", costco:'Costco', safeway:'Safeway', wf:'WF' };
-const STORE_CLASSES = { tj:'tj', costco:'costco', safeway:'safeway', wf:'wf' };
+// ─── STORE CONFIG (single source of truth) ─────────────────────────────────────
+// To add a store: add one entry here. id must be a short lowercase key with no spaces.
+// `cls` controls its color via CSS (.store-name.<cls>, .store-select-<cls>); reuse an
+// existing cls to borrow its color, or add matching CSS for a new one.
+const STORES = [
+  { id:'tj',      label:"TJ's",     full:'Trader Joes', short:"TJ's",   cls:'tj' },
+  { id:'costco',  label:'Costco',   full:'Costco',      short:'Costco', cls:'costco' },
+  { id:'wf',      label:'WF',       full:'Whole Foods', short:'WF',     cls:'wf' },
+  { id:'safeway', label:'Safeway',  full:'Safeway',     short:'Safe',   cls:'safeway' },
+];
+const STORE_CYCLE = STORES.map(s => s.id);
+const STORE_LABELS = STORES.reduce((o,s)=>{ o[s.id]=s.label; return o; }, {});
+const STORE_CLASSES = STORES.reduce((o,s)=>{ o[s.id]=s.cls; return o; }, {});
+const DEFAULT_STORE = STORES[0].id;
 
 function changeStore(itemKey, newStore) {
   storeOverrides[itemKey] = newStore;
@@ -4487,7 +4499,7 @@ function openDayPickerModal(recipeName) {
 }
 
 function renderRecipeIngredients(recipe, selectedProtein) {
-  const STORE_PILL = { costco:'costco', tj:'tj', wf:'wf', safeway:'safeway' };
+  const STORE_PILL = STORE_CLASSES;
   const ingEl = document.getElementById('recipeModalIngredients');
   ingEl.innerHTML = '';
 
@@ -5151,7 +5163,7 @@ const Store = {
 // ─── WEEK PLANS ───────────────────────────────────────────────────────────────
 
 function buildGroceryByStore(weekKey, plan) {
-  const byStore = { tj:[], costco:[], wf:[], safeway:[] };
+  const byStore = {}; STORES.forEach(s => byStore[s.id] = []);
   const seen = new Set();
 
   // Prep recipe ingredients
@@ -5717,7 +5729,7 @@ function sharePlan() {
   const meals = plan.map((m, i) => m?.name ? `${SHORT_DAYS[i]}: ${getMealDisplayName(m)}` : null).filter(Boolean);
 
   // Build grocery list (unchecked only)
-  const byStore = { tj:[], costco:[], wf:[], safeway:[] };
+  const byStore = {}; STORES.forEach(s => byStore[s.id] = []);
   const seen = new Set();
   plan.forEach(meal => {
     if (!meal || !meal.name) return;
