@@ -6769,6 +6769,28 @@ function editSavedRecipe() {
 let deCuisineSel = [];
 let deTypeSel = [];
 let deProteins = [];
+let deTags = [];
+
+function renderDeTags() {
+  const el = document.getElementById('deTagButtons');
+  if (!el) return;
+  el.innerHTML = '';
+  BUILTIN_TAGS.forEach(function(tag) {
+    const btn = document.createElement('button');
+    const active = deTags.indexOf(tag.id) !== -1;
+    btn.className = 'cat-btn' + (active ? ' active' : '');
+    btn.type = 'button';
+    btn.textContent = tag.label;
+    btn.onclick = function() { toggleDeTag(tag.id); };
+    el.appendChild(btn);
+  });
+}
+
+function toggleDeTag(id) {
+  const i = deTags.indexOf(id);
+  if (i === -1) deTags.push(id); else deTags.splice(i, 1);
+  renderDeTags();
+}
 
 function renderDeClassChips() {
   // Cuisine chips (selected) + dropdown (unselected options)
@@ -6926,6 +6948,9 @@ function openDiscoverEditModal(r) {
           <option value="">+ Add type...</option>
         </select>
 
+        <label class="input-label">Tags</label>
+        <div id="deTagButtons" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px"></div>
+
         <details style="margin-bottom:12px;border:1px solid var(--border);border-radius:8px;padding:8px 10px">
           <summary style="cursor:pointer;font-family:var(--font-mono,monospace);font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted)">Advanced: Swappable proteins</summary>
           <div style="margin-top:10px">
@@ -6972,6 +6997,10 @@ function openDiscoverEditModal(r) {
   deCuisineSel = Array.isArray(r.cuisine) ? r.cuisine.slice() : [];
   deTypeSel = Array.isArray(r.type) ? r.type.slice() : [];
   deProteins = Array.isArray(r.proteins) ? r.proteins.map(function(p){return {label:p.label,item:p.item,store:p.store||'costco'};}) : [];
+  // Load existing tags (only recognized built-in tag ids)
+  const knownTagIds = BUILTIN_TAGS.map(function(t){ return t.id; });
+  deTags = (r.tags || []).filter(function(t){ return knownTagIds.indexOf(t) !== -1; });
+  renderDeTags();
   renderDeClassChips();
   renderDeProteins();
   var _imp = document.getElementById('deImportBtn');
@@ -7081,7 +7110,7 @@ async function confirmDiscoverEdit() {
 
   const recipe = {
     name,
-    tags: [cat, 'custom'],
+    tags: [cat, 'custom'].concat(deTags),
     shop: null,
     url: url || null,
     ingredients,
