@@ -5483,6 +5483,7 @@ async function loadCustomRecipes() {
         customRecipes.push({ name: row.name, cat, sbId: row.id });
       });
       renderRotationGrid();
+      renderWeek(); // re-render cards so custom overrides replace built-in snapshots
       return;
     }
   } catch(e) { console.warn('Supabase unavailable for recipes'); }
