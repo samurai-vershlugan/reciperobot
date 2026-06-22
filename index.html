@@ -3131,7 +3131,7 @@ function renderWeek() {
         </div>
       `;
       // Tapping the meal name opens the recipe modal
-      card.querySelector('.meal-name-tappable').addEventListener('click', () => openRecipeModal(meal.name, i));
+      card.querySelectorAll('.meal-name-tappable').forEach(function(elt){ elt.addEventListener('click', () => openRecipeModal(meal.name, i)); });
     } else {
       card.innerHTML = `
         <div class="day-header">
