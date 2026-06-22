@@ -3857,13 +3857,13 @@ function openSwapModal(dayIndex) {
 
 function renderModalCats(dayIndex) {
   const weekdayCats = [
-    ['all','All'],['burger','Burgers'],['chicken','Chicken'],['easy','Easy Night'],
-    ['fish','Fish'],['mediterranean','Mediterranean'],['taco','Mexican'],
+    ['all','All'],['burger','Burgers'],['easy','Easy Night'],
+    ['mediterranean','Mediterranean'],['taco','Mexican'],
     ['other','Other'],['pasta','Pasta'],['slowcooker','Slow Cooker'],['steak','Steak']
   ];
   const fridayCats = [
-    ['all','All'],['friday_special','Shabbat/Friday'],['burger','Burgers'],['chicken','Chicken'],
-    ['easy','Easy Night'],['fish','Fish'],['mediterranean','Mediterranean'],['taco','Mexican'],
+    ['all','All'],['friday_special','Shabbat/Friday'],['burger','Burgers'],
+    ['easy','Easy Night'],['mediterranean','Mediterranean'],['taco','Mexican'],
     ['other','Other'],['pasta','Pasta'],['slowcooker','Slow Cooker'],['steak','Steak']
   ];
   const cats = dayIndex === 4 ? fridayCats : weekdayCats;
@@ -4013,6 +4013,7 @@ let currentTagRecipeName = null;
 const PROTEIN_FILTERS = [
   { label: 'Beef',    keywords: ['ground beef','skirt steak','ribeye','strip','flank','beef','tri-tip','brisket','chuck'] },
   { label: 'Chicken', keywords: ['chicken'] },
+  { label: 'Fish',    keywords: ['fish','cod','halibut','tilapia','snapper','bass','trout','tuna','mahi','sole','flounder','salmon'] },
   { label: 'Lamb',    keywords: ['lamb'] },
   { label: 'Pork',    keywords: ['carnitas','pork','del real'] },
   { label: 'Salmon',  keywords: ['salmon'] },
