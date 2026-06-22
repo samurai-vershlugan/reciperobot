@@ -2056,6 +2056,29 @@
 
   .ing-name-editable { cursor: pointer; }
   .ing-name-editable:hover { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+
+  .meal-thumb {
+    font-size: 38px;
+    line-height: 1;
+    margin-bottom: 10px;
+    cursor: pointer;
+    display: block;
+  }
+  .meal-preview {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin: 8px 0 10px;
+  }
+  .meal-prev-item {
+    font-family: var(--font-body);
+    font-size: 11px;
+    color: var(--text-mid);
+    background: var(--surface2);
+    padding: 2px 8px;
+    border-radius: 20px;
+    white-space: nowrap;
+  }
 </style>
 
 <!-- ─── LOGIN SCREEN ─────────────────────────────────────────────────────── -->
@@ -3092,14 +3115,18 @@ function renderWeek() {
           </div>
         </div>
         <div class="day-meal">
+          <div class="meal-thumb meal-name-tappable">${mealEmoji(meal)}</div>
           <div class="meal-name meal-name-tappable">${getMealDisplayName(meal)}</div>
+          <div class="meal-preview">
+            ${mealPreviewIngredients(meal, 3).map(n => `<span class="meal-prev-item">${n}</span>`).join('')}
+          </div>
+          <div class="meal-tags">
+            ${getDisplayTags(meal).map(t => `<span class="tag tag-${t}">${BUILTIN_TAGS.find(b=>b.id===t)?.label || t}</span>`).join('')}
+          </div>
           <div class="meal-actions">
             <button class="action-btn btn-swap" onclick="openSwapModal(${i})">⇄ Swap</button>
             <button class="action-btn btn-swap" onclick="openAddLibraryModal(${i})">＋ Add</button>
             <button class="action-btn btn-lock${isLocked ? ' locked' : ''}" onclick="toggleLock(${i})" title="${isLocked ? 'Unlock this meal' : 'Lock this meal'}">${isLocked ? '🔒' : '🔓'}</button>
-          </div>
-          <div class="meal-tags">
-            ${getDisplayTags(meal).map(t => `<span class="tag tag-${t}">${BUILTIN_TAGS.find(b=>b.id===t)?.label || t}</span>`).join('')}
           </div>
         </div>
       `;
@@ -4247,6 +4274,63 @@ function getMealCategory(mealName) {
     if (recipes.some(r => r.name === mealName)) return cat;
   }
   return null;
+}
+
+function mealEmoji(meal) {
+  const liveMeal = getAllRecipes().find(r => r.name === meal.name) || meal;
+  const name = (meal.name || '').toLowerCase();
+  const tags = (liveMeal.tags || []).map(t => t.toLowerCase());
+  // Name keyword matches first (most specific)
+  const map = [
+    [/salmon|fish|cod|halibut|tuna|tilapia/, '🐟'],
+    [/shrimp|prawn/, '🦐'],
+    [/taco|burrito|quesadilla|nacho/, '🌮'],
+    [/burger|slider/, '🍔'],
+    [/pasta|spaghetti|rigatoni|noodle|alfredo|carbonara|mac/, '🍝'],
+    [/pizza/, '🍕'],
+    [/soup|stew|chili|broth/, '🍲'],
+    [/salad/, '🥗'],
+    [/sandwich|sub|panini/, '🥪'],
+    [/sushi|poke/, '🍣'],
+    [/rice|fried rice|risotto/, '🍚'],
+    [/curry|tikka|masala/, '🍛'],
+    [/steak|beef|ribeye|brisket/, '🥩'],
+    [/pork|carnitas|bacon/, '🥓'],
+    [/chicken|poultry/, '🍗'],
+    [/turkey/, '🦃'],
+    [/egg|omelet|frittata|breakfast/, '🍳'],
+    [/pancake|waffle|french toast/, '🥞'],
+    [/shakshuka|shabbat|roast/, '🍗'],
+    [/bowl/, '🥣'],
+    [/wrap|pita|shawarma|souvlaki|gyro/, '🥙'],
+    [/dumpling|potsticker|gyoza/, '🥟'],
+    [/leftover/, '🍽️'],
+    [/takeout|take-out/, '🥡'],
+  ];
+  for (const [re, emoji] of map) { if (re.test(name)) return emoji; }
+  // Fall back to protein detection
+  if (recipeUsesProtein(liveMeal, 'Chicken')) return '🍗';
+  if (recipeUsesProtein(liveMeal, 'Beef')) return '🥩';
+  if (recipeUsesProtein(liveMeal, 'Fish')) return '🐟';
+  if (recipeUsesProtein(liveMeal, 'Shrimp')) return '🦐';
+  if (recipeUsesProtein(liveMeal, 'Pork')) return '🥓';
+  if (tags.includes('vegetarian') || tags.includes('veg')) return '🥦';
+  return '🍽️';
+}
+
+function mealPreviewIngredients(meal, max) {
+  const liveMeal = getAllRecipes().find(r => r.name === meal.name) || meal;
+  const ings = (liveMeal.ingredients || []);
+  const names = ings.map(function(ing){ return ingCleanName(ing); }).filter(Boolean);
+  // Dedupe and take first N
+  const seen = new Set(); const out = [];
+  for (const n of names) {
+    const k = n.toLowerCase();
+    if (seen.has(k)) continue;
+    seen.add(k); out.push(n);
+    if (out.length >= (max || 3)) break;
+  }
+  return out;
 }
 
 // Get the display name for a meal, accounting for selected protein
@@ -5707,7 +5791,30 @@ function printSnapshot() {
       .snapshot-store-name { font-size: 12px; font-weight: bold; color: #333; margin-bottom: 4px; }
       .snapshot-ing { font-size: 13px; padding: 1px 0 1px 10px; color: #444; }
       .snapshot-week-title { font-size: 18px; font-weight: bold; margin-bottom: 4px; }
-    </style></head>
+    
+  .meal-thumb {
+    font-size: 38px;
+    line-height: 1;
+    margin-bottom: 10px;
+    cursor: pointer;
+    display: block;
+  }
+  .meal-preview {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin: 8px 0 10px;
+  }
+  .meal-prev-item {
+    font-family: var(--font-body);
+    font-size: 11px;
+    color: var(--text-mid);
+    background: var(--surface2);
+    padding: 2px 8px;
+    border-radius: 20px;
+    white-space: nowrap;
+  }
+</style></head>
     <body>${content}</body></html>`);
   win.document.close();
   win.print();
