@@ -1060,7 +1060,7 @@
     line-height: 1.5;
   }
   .prep-strategy strong { color: var(--accent); }
-  .recipe-modal { padding: 24px 24px 16px; }
+  .recipe-modal { padding: 20px 22px 14px; }
 
   .recipe-modal-header { margin-bottom: 16px; padding-right: 24px; }
   .recipe-modal-name {
@@ -2256,7 +2256,7 @@
 </div>
 
 <div class="modal-overlay" id="recipeModal" onclick="closeRecipeModal(event)">
-  <div class="modal recipe-modal" style="position:relative;max-width:460px;width:94%">
+  <div class="modal recipe-modal" style="position:relative;max-width:460px;width:94%;max-height:90vh;display:flex;flex-direction:column">
     <button class="modal-close" onclick="document.getElementById('recipeModal').classList.remove('open')">×</button>
     <div class="recipe-modal-header">
       <div id="recipeModalTitle" class="recipe-modal-name"></div>
@@ -2271,11 +2271,13 @@
       <span class="recipe-modal-add-label">Add to week:</span>
       <div id="recipeModalDayBtns" class="recipe-modal-day-btns"></div>
     </div>
-    <div class="recipe-modal-section-label">Ingredients</div>
-    <div id="recipeModalIngredients" class="recipe-modal-ingredients"></div>
-    <div id="recipeModalStepsSection" style="display:none">
-      <div class="recipe-modal-section-label" style="margin-top:16px">Instructions</div>
-      <ol id="recipeModalSteps" class="recipe-modal-steps"></ol>
+    <div class="recipe-modal-scroll" style="overflow-y:auto;flex:1;min-height:0">
+      <div class="recipe-modal-section-label">Ingredients</div>
+      <div id="recipeModalIngredients" class="recipe-modal-ingredients"></div>
+      <div id="recipeModalStepsSection" style="display:none">
+        <div class="recipe-modal-section-label" style="margin-top:16px">Instructions</div>
+        <ol id="recipeModalSteps" class="recipe-modal-steps"></ol>
+      </div>
     </div>
     <div class="recipe-modal-footer">
       <span class="recipe-modal-footer-note">Checked items won't appear in this week's grocery list</span>
