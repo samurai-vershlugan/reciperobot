@@ -4270,7 +4270,7 @@ let recipeSearchType = null;
 
 // Two clean axes. Cuisine = regional style. Type = dish format / protein.
 const CUISINE_FILTERS = ['Mexican','Mediterranean','American','Asian','Italian'];
-const TYPE_FILTERS = ['Chicken','Beef','Pork','Fish','Shrimp','Pasta','Burger','Salad','Soup','Bowl'];
+const TYPE_FILTERS = ['Chicken','Beef','Pork','Fish','Shrimp','Turkey','Vegetarian'];
 
 // Map a recipe to its cuisine(s) using category + tags + name keywords
 function recipeCuisines(r) {
@@ -4294,17 +4294,12 @@ function recipeTypes(r) {
   if (Array.isArray(r.type)) r.type.forEach(t => out.add(t));
   const tags = (r.tags || []).map(t => t.toLowerCase());
   const name = r.name.toLowerCase();
-  const inCat = (c) => tags.includes(c) || (RECIPES[c] || []).some(x => x.name === r.name);
   // Proteins via existing matcher — always runs, including protein-picker options
-  ['Chicken','Beef','Pork','Fish','Shrimp'].forEach(p => {
+  ['Chicken','Beef','Pork','Fish','Shrimp','Turkey'].forEach(p => {
     if (recipeUsesProtein(r, p)) out.add(p);
   });
-  // Dish formats
-  if (inCat('pasta') || /pasta|spaghetti|rigatoni|noodle|alfredo|ramen|mac/.test(name)) out.add('Pasta');
-  if (inCat('burger') || /burger|slider/.test(name)) out.add('Burger');
-  if (/salad/.test(name)) out.add('Salad');
-  if (/soup|stew|chili|broth/.test(name)) out.add('Soup');
-  if (/bowl/.test(name)) out.add('Bowl');
+  // Vegetarian: explicit tag or no detected meat protein
+  if (tags.includes('vegetarian') || tags.includes('veg')) out.add('Vegetarian');
   return [...out];
 }
 
@@ -4326,7 +4321,7 @@ function renderRecipeFilters() {
   }
   const pEl = document.getElementById('recipeProteinFilters');
   if (pEl) {
-    pEl.innerHTML = '<span style="font-family:var(--font-mono,monospace);font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);align-self:center;margin-right:4px">Type:</span>';
+    pEl.innerHTML = '<span style="font-family:var(--font-mono,monospace);font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);align-self:center;margin-right:4px">Protein:</span>';
     TYPE_FILTERS.forEach(label => {
       const btn = document.createElement('button');
       btn.className = 'cat-btn' + (recipeSearchType === label ? ' active' : '');
@@ -6825,7 +6820,7 @@ function renderDeClassChips() {
   const tSel = document.getElementById('deTypeSelect');
   if (tSel) {
     const opts = TYPE_FILTERS.filter(function(l){ return !deTypeSel.includes(l); });
-    tSel.innerHTML = '<option value="">+ Add type...</option>' +
+    tSel.innerHTML = '<option value="">+ Add protein...</option>' +
       opts.map(function(l){ return '<option value="'+l+'">'+l+'</option>'; }).join('') +
       '<option value="__custom__">+ Custom...</option>';
   }
@@ -6942,10 +6937,10 @@ function openDiscoverEditModal(r) {
           <option value="">+ Add cuisine...</option>
         </select>
 
-        <label class="input-label">Type</label>
+        <label class="input-label">Protein</label>
         <div id="deTypeChips" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px"></div>
         <select id="deTypeSelect" class="text-input" style="margin-bottom:10px;background:var(--surface2);color:var(--text)" onchange="dePickType(this.value)">
-          <option value="">+ Add type...</option>
+          <option value="">+ Add protein...</option>
         </select>
 
         <label class="input-label">Tags</label>
