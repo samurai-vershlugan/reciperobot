@@ -6885,6 +6885,7 @@ function editSavedRecipe() {
     cuisine: Array.isArray(recipe.cuisine) ? recipe.cuisine.slice() : [],
     type: Array.isArray(recipe.type) ? recipe.type.slice() : [],
     proteins: Array.isArray(recipe.proteins) ? recipe.proteins.slice() : [],
+    tags: Array.isArray(recipe.tags) ? recipe.tags.slice() : [],
     _editingExisting: recipe.name,
     _isCustom: !!recipe.custom
   };
