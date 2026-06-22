@@ -5463,22 +5463,24 @@ async function loadCustomRecipes() {
       rows.forEach(row => {
         const cat = row.category || 'other';
         if (!RECIPES[cat]) RECIPES[cat] = [];
-        if (!RECIPES[cat].find(r => r.name === row.name)) {
-          RECIPES[cat].push({
-            name: row.name,
-            tags: row.tags || row.tags_json || [cat,'custom'],
-            shop: null,
-            ingredients: row.ingredients || row.ingredients_json || [],
-            steps: row.steps || row.steps_json || undefined,
-            cuisine: row.cuisine_json || undefined,
-            type: row.type_json || undefined,
-            proteins: row.proteins_json || undefined,
-            url: row.url || null,
-            custom: true,
-            sbId: row.id
-          });
-          customRecipes.push({ name: row.name, cat, sbId: row.id });
-        }
+        // Custom (saved) recipes OVERRIDE any built-in of the same name — remove built-in copies everywhere first
+        Object.keys(RECIPES).forEach(function(c){
+          RECIPES[c] = RECIPES[c].filter(function(rr){ return rr.name !== row.name; });
+        });
+        RECIPES[cat].push({
+          name: row.name,
+          tags: row.tags_json || row.tags || [cat,'custom'],
+          shop: null,
+          ingredients: row.ingredients_json || row.ingredients || [],
+          steps: row.steps_json || row.steps || undefined,
+          cuisine: row.cuisine_json || undefined,
+          type: row.type_json || undefined,
+          proteins: row.proteins_json || undefined,
+          url: row.url || null,
+          custom: true,
+          sbId: row.id
+        });
+        customRecipes.push({ name: row.name, cat, sbId: row.id });
       });
       renderRotationGrid();
       return;
@@ -7267,10 +7269,12 @@ async function confirmDiscoverEdit() {
     custom: true
   };
 
+  // Remove any existing copy of this recipe across ALL categories, then add the fresh one
+  Object.keys(RECIPES).forEach(function(c){
+    RECIPES[c] = RECIPES[c].filter(function(rr){ return rr.name !== name; });
+  });
   if (!RECIPES[cat]) RECIPES[cat] = [];
-  if (!RECIPES[cat].some(r => r.name === name)) {
-    RECIPES[cat].push(recipe);
-  }
+  RECIPES[cat].push(recipe);
 
   // Save to Supabase
   if (FAMILY_ID && AUTH_TOKEN) {
@@ -7310,6 +7314,7 @@ async function confirmDiscoverEdit() {
   }
 
   renderRotationGrid();
+  renderWeek(); // refresh day cards so tag/name changes show immediately
   closeDiscoverEditModal();
   showToast(`"${name}" saved to your library!`);
 }
