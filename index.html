@@ -3895,7 +3895,7 @@ function openSwapModal(dayIndex) {
   const key = getWeekKey(currentWeekOffset);
   const current = weekPlans[key][dayIndex];
   document.getElementById('swapDay').textContent = `Replacing: ${DAYS[dayIndex]} — ${getMealDisplayName(current)}`;
-  activeFilter = dayIndex === 4 ? 'friday_special' : 'all';
+  activeFilter = 'all';
   activeTagFilter = null;
   activeProteinFilter = null;
   // Hide protein picker
@@ -7219,6 +7219,15 @@ async function confirmDiscoverEdit() {
     Object.keys(RECIPES).forEach(function(cat) {
       RECIPES[cat] = RECIPES[cat].filter(function(rr) { return rr.name !== oldName; });
     });
+    // Update any planned meals (all weeks) that reference the old name → new name
+    if (oldName !== name) {
+      Object.keys(weekPlans).forEach(function(wk) {
+        (weekPlans[wk] || []).forEach(function(m) {
+          if (m && m.name === oldName) m.name = name;
+        });
+      });
+      persistWeekPlans();
+    }
     // Delete old custom recipe from Supabase if it was custom
     if (pendingDiscoverRecipe._isCustom && FAMILY_ID && AUTH_TOKEN) {
       try {
