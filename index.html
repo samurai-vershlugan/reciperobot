@@ -6911,6 +6911,8 @@ function renderDeTags() {
   const el = document.getElementById('deTagButtons');
   if (!el) return;
   el.innerHTML = '';
+  const builtinIds = BUILTIN_TAGS.map(function(t){ return t.id; });
+  // Built-in tags as toggle buttons
   BUILTIN_TAGS.forEach(function(tag) {
     const btn = document.createElement('button');
     const active = deTags.indexOf(tag.id) !== -1;
@@ -6919,6 +6921,16 @@ function renderDeTags() {
     btn.textContent = tag.label;
     btn.onclick = function() { toggleDeTag(tag.id); };
     el.appendChild(btn);
+  });
+  // Any extra (legacy/custom) tags shown as removable chips
+  deTags.filter(function(t){ return builtinIds.indexOf(t) === -1; }).forEach(function(t) {
+    const chip = document.createElement('button');
+    chip.className = 'cat-btn active';
+    chip.type = 'button';
+    chip.textContent = t + ' ✕';
+    chip.title = 'Remove this tag';
+    chip.onclick = function() { toggleDeTag(t); };
+    el.appendChild(chip);
   });
 }
 
@@ -7134,8 +7146,8 @@ function openDiscoverEditModal(r) {
   deTypeSel = Array.isArray(r.type) ? r.type.slice() : [];
   deProteins = Array.isArray(r.proteins) ? r.proteins.map(function(p){return {label:p.label,item:p.item,store:p.store||'costco'};}) : [];
   // Load existing tags (only recognized built-in tag ids)
-  const knownTagIds = BUILTIN_TAGS.map(function(t){ return t.id; });
-  deTags = (r.tags || []).filter(function(t){ return knownTagIds.indexOf(t) !== -1; });
+  // Load ALL non-category tags so any of them can be cleared (built-in + legacy/custom)
+  deTags = (r.tags || []).filter(function(t){ return !CAT_TAGS.has(t); });
   renderDeTags();
   renderDeClassChips();
   renderDeProteins();
