@@ -7072,10 +7072,7 @@ function openDiscoverEditModal(r) {
     modal.innerHTML = `
       <div class="modal" style="position:relative;max-width:500px;width:95%;max-height:90vh;display:flex;flex-direction:column">
         <button class="modal-close" onclick="closeDiscoverEditModal()">×</button>
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex:0 0 auto">
-          <h3 style="margin:0">Review Before Adding</h3>
-          <button class="confirm-btn" style="background:transparent;border:1.5px solid var(--accent2);color:var(--accent2);white-space:nowrap;padding:5px 10px;font-size:11px" onclick="discoverSimilarFromEditor()">✦ Discover similar</button>
-        </div>
+        <h3 style="flex:0 0 auto">Review Before Adding</h3>
         <div class="de-scroll" style="overflow-y:auto;flex:1;min-height:0;padding-right:4px">
         <p style="color:var(--text-muted);font-size:12px;margin-bottom:12px;line-height:1.5">
           Verify the ingredients match the actual recipe. Edit anything before saving to your library.
@@ -7120,9 +7117,12 @@ function openDiscoverEditModal(r) {
           <button class="confirm-btn" id="deImportBtn" onclick="importRecipeFromUrl()" style="flex:0 0 auto;padding:8px 14px;white-space:nowrap;display:none">Import from URL</button>
         </div>
         </div>
-        <div style="display:flex;gap:8px;justify-content:flex-end;align-items:center;flex:0 0 auto;padding-top:12px;border-top:1px solid var(--border);margin-top:4px">
-          <button class="confirm-btn" style="background:#333;color:#ccc" onclick="closeDiscoverEditModal()">Cancel</button>
-          <button class="confirm-btn" style="white-space:nowrap" onclick="confirmDiscoverEdit()">Save to Library</button>
+        <div style="display:flex;gap:8px;justify-content:space-between;align-items:center;flex:0 0 auto;padding-top:12px;border-top:1px solid var(--border);margin-top:4px;flex-wrap:wrap">
+          <button class="confirm-btn" style="background:transparent;border:1.5px solid var(--accent2);color:var(--accent2);white-space:nowrap;padding:7px 12px;font-size:12px" onclick="discoverSimilarFromEditor()">✦ Discover similar</button>
+          <div style="display:flex;gap:8px">
+            <button class="confirm-btn" style="background:#333;color:#ccc" onclick="closeDiscoverEditModal()">Cancel</button>
+            <button class="confirm-btn" style="white-space:nowrap" onclick="confirmDiscoverEdit()">Save to Library</button>
+          </div>
         </div>
       </div>
     `;
