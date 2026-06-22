@@ -4238,13 +4238,10 @@ async function saveRecipeTags(recipe) {
 }
 
 function loadTagOverrides() {
-  try {
-    const overrides = JSON.parse(localStorage.getItem('mealos-tag-overrides') || '{}');
-    Object.entries(overrides).forEach(([name, tags]) => {
-      const recipe = getAllRecipes().find(r => r.name === name);
-      if (recipe) recipe.tags = tags;
-    });
-  } catch(e) {}
+  // NOTE: Tags are now managed in the recipe editor (saved to Supabase / recipe object).
+  // The old localStorage override system could DROP tags, so it is disabled.
+  // Clear any stale overrides left over from the removed in-place tag editor.
+  try { localStorage.removeItem('mealos-tag-overrides'); } catch(e) {}
 }
 
 // ─── ROTATION GRID ────────────────────────────────────────────────────────────
