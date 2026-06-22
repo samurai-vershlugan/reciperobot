@@ -3130,7 +3130,7 @@ function renderWeek() {
               ${mealPreviewIngredients(meal, 3).map(n => `<span class="meal-prev-item">${n}</span>`).join('')}
             </div>
             <div class="meal-tags">
-              ${getDisplayTags(meal).map(t => `<span class="tag tag-${t}">${BUILTIN_TAGS.find(b=>b.id===t)?.label || t}</span>`).join('')}
+              ${getDisplayTags(getAllRecipes().find(r => r.name === meal.name) || meal).map(t => `<span class="tag tag-${t}">${BUILTIN_TAGS.find(b=>b.id===t)?.label || t}</span>`).join('')}
             </div>
           </div>
           <div class="meal-actions">
