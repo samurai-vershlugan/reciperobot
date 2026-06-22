@@ -209,10 +209,13 @@
   .day-card {
     background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: 10px;
+    border-radius: 12px;
     overflow: hidden;
-    transition: border-color 0.2s;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    display: flex;
+    flex-direction: column;
   }
+  .day-card:hover { box-shadow: 0 4px 16px rgba(44,26,14,0.06); }
 
   .day-card:hover { border-color: var(--accent); }
   .day-card.friday-card { border-color: rgba(232,184,75,0.3); }
@@ -244,19 +247,20 @@
 
   .day-meal {
     padding: 14px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 230px;
   }
 
   .meal-name {
     font-family: var(--font-display);
-    font-size: 15px;
+    font-size: 16px;
     font-weight: 700;
-    line-height: 1.3;
-    margin-bottom: 8px;
+    line-height: 1.25;
+    margin-bottom: 4px;
     color: var(--text);
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
+    cursor: pointer;
   }
   .meal-name-tappable {
     cursor: pointer;
@@ -284,8 +288,9 @@
     display: flex;
     flex-wrap: wrap;
     gap: 3px;
-    margin-top: 8px;
-    opacity: 0.65;
+    margin-top: 0;
+    margin-bottom: 4px;
+    opacity: 0.7;
   }
 
   .tag {
@@ -458,7 +463,8 @@
   .meal-actions {
     display: flex;
     gap: 6px;
-    margin-top: 10px;
+    margin-top: auto;
+    padding-top: 10px;
   }
 
   .action-btn {
@@ -2064,11 +2070,19 @@
     cursor: pointer;
     display: block;
   }
+  .meal-card-top { flex: 0 0 auto; }
+  .meal-card-mid {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-top: 8px;
+  }
   .meal-preview {
     display: flex;
     flex-wrap: wrap;
     gap: 4px;
-    margin: 8px 0 10px;
+    align-content: flex-start;
   }
   .meal-prev-item {
     font-family: var(--font-body);
@@ -3115,13 +3129,17 @@ function renderWeek() {
           </div>
         </div>
         <div class="day-meal">
-          <div class="meal-thumb meal-name-tappable">${mealEmoji(meal)}</div>
-          <div class="meal-name meal-name-tappable">${getMealDisplayName(meal)}</div>
-          <div class="meal-preview">
-            ${mealPreviewIngredients(meal, 3).map(n => `<span class="meal-prev-item">${n}</span>`).join('')}
+          <div class="meal-card-top">
+            <div class="meal-thumb meal-name-tappable">${mealEmoji(meal)}</div>
+            <div class="meal-name meal-name-tappable">${getMealDisplayName(meal)}</div>
           </div>
-          <div class="meal-tags">
-            ${getDisplayTags(meal).map(t => `<span class="tag tag-${t}">${BUILTIN_TAGS.find(b=>b.id===t)?.label || t}</span>`).join('')}
+          <div class="meal-card-mid">
+            <div class="meal-preview">
+              ${mealPreviewIngredients(meal, 3).map(n => `<span class="meal-prev-item">${n}</span>`).join('')}
+            </div>
+            <div class="meal-tags">
+              ${getDisplayTags(meal).map(t => `<span class="tag tag-${t}">${BUILTIN_TAGS.find(b=>b.id===t)?.label || t}</span>`).join('')}
+            </div>
           </div>
           <div class="meal-actions">
             <button class="action-btn btn-swap" onclick="openSwapModal(${i})">⇄ Swap</button>
@@ -5799,11 +5817,19 @@ function printSnapshot() {
     cursor: pointer;
     display: block;
   }
+  .meal-card-top { flex: 0 0 auto; }
+  .meal-card-mid {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-top: 8px;
+  }
   .meal-preview {
     display: flex;
     flex-wrap: wrap;
     gap: 4px;
-    margin: 8px 0 10px;
+    align-content: flex-start;
   }
   .meal-prev-item {
     font-family: var(--font-body);
