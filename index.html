@@ -2279,15 +2279,7 @@
     </div>
     <div class="recipe-modal-footer">
       <span class="recipe-modal-footer-note">Checked items won't appear in this week's grocery list</span>
-      <div class="recipe-tag-editor" id="recipeTagEditor">
-        <div class="recipe-tag-editor-label">Tags</div>
-        <div class="tag-toggle-grid" id="tagToggleGrid"></div>
-        <div class="tag-custom-input-row">
-          <input class="tag-custom-input" id="customTagInput" placeholder="Add custom tag…" maxlength="24" />
-          <button class="tag-add-btn" onclick="addCustomTag()">＋</button>
-        </div>
-        <div class="custom-tags-list" id="customTagsList"></div>
-      </div>
+
     </div>
   </div>
 </div>
@@ -4216,7 +4208,6 @@ function addCustomTag() {
   if (!recipe.tags.includes(val)) {
     recipe.tags.push(val);
     saveRecipeTags(recipe);
-    renderTagEditor(recipe);
     renderWeek();
   }
   input.value = '';
@@ -7096,7 +7087,7 @@ function openDiscoverEditModal(r) {
           <option value="">+ Add protein...</option>
         </select>
 
-        <label class="input-label">Tags</label>
+        <label class="input-label">Tags <span style="opacity:0.5;font-size:9px">(highlighted = applied; tap to toggle)</span></label>
         <div id="deTagButtons" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px"></div>
 
         <details style="margin-bottom:12px;border:1px solid var(--border);border-radius:8px;padding:8px 10px">
