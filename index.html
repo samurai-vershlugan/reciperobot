@@ -2093,6 +2093,14 @@
     border-radius: 20px;
     white-space: nowrap;
   }
+
+  .grocery-del-btn {
+    background: none; border: none; color: var(--text-muted);
+    cursor: pointer; font-size: 13px; padding: 0 4px; opacity: 0.4;
+    flex: 0 0 auto; transition: opacity 0.15s, color 0.15s;
+  }
+  .ingredient-item:hover .grocery-del-btn { opacity: 0.7; }
+  .grocery-del-btn:hover { opacity: 1 !important; color: #c0392b; }
 </style>
 
 <!-- ─── LOGIN SCREEN ─────────────────────────────────────────────────────── -->
@@ -3233,7 +3241,9 @@ function syncGroceryList(key) {
   list.items.forEach(it => { existingByName[it.name.toLowerCase()] = it; });
 
   // 1. Add or update recipe-sourced items
+  const removed = list.removed || [];
   Object.keys(reqByName).forEach(nk => {
+    if (removed.indexOf(nk) !== -1) return; // user deleted this item — don't re-add
     const req = reqByName[nk];
     const sources = Array.from(req.recipes);
     if (existingByName[nk]) {
@@ -3367,12 +3377,38 @@ function renderGroceryList() {
         sel.appendChild(opt);
       });
       div.appendChild(sel);
+
+      const delBtn = document.createElement('button');
+      delBtn.className = 'grocery-del-btn';
+      delBtn.textContent = '✕';
+      delBtn.title = 'Remove from list';
+      delBtn.onclick = (e) => { e.stopPropagation(); deleteGroceryItem(it); };
+      div.appendChild(delBtn);
+
       group.appendChild(div);
     });
     el.appendChild(group);
   });
 
   updateConfirmBar();
+}
+
+function deleteGroceryItem(it) {
+  const key = getWeekKey(currentWeekOffset);
+  const list = groceryLists[key];
+  if (!list) return;
+  // Remove the item from the list
+  list.items = list.items.filter(function(x){ return x !== it; });
+  // If it was recipe-sourced, suppress it so syncGroceryList won't re-add it this week
+  if (!it.manual && (it.sources && it.sources.length)) {
+    if (!list.removed) list.removed = [];
+    if (list.removed.indexOf(it.name.toLowerCase()) === -1) list.removed.push(it.name.toLowerCase());
+  }
+  persistGroceryLists();
+  persistWeekPlans();
+  renderGroceryList();
+  renderAlexaCommands();
+  showToast('Removed "' + it.name + '"');
 }
 
 async function toggleGroceryItem(it) {
@@ -3670,32 +3706,23 @@ function getWakeWord() {
 
 function renderAlexaCommands() {
   const key = getWeekKey(currentWeekOffset);
-  const plan = weekPlans[key] || [];
   const wake = getWakeWord();
+
+  // Build from the actual persistent grocery list (includes manual items, respects checkoffs)
+  syncGroceryList(key);
+  const list = (groceryLists[key] && groceryLists[key].items) || [];
+  const storeFull = { tj:'Trader Joes', costco:'Costco', wf:'Whole Foods', safeway:'Safeway' };
 
   const seen = new Set();
   const items = [];
-  plan.forEach(meal => {
-    if (!meal || !meal.name) return;
-    const liveMeal = getAllRecipes().find(r => r.name === meal.name) || meal;
-    const allIngs = [...(liveMeal.ingredients || [])];
-    // Include selected protein ingredient if present
-    const protein = meal.selectedProtein || (liveMeal.proteins ? liveMeal.proteins[0] : null);
-    if (protein && protein.item) allIngs.unshift({ item: protein.item, store: protein.store });
-
-    allIngs.forEach(ing => {
-      if (!ing.item) return;
-      const itemKey = `${key}-${ing.item}`;
-      // Skip if already checked off in grocery list
-      if (havePantryItem(ing.item) || checkedIngredients[itemKey]) return;
-      const clean = ingCleanName(ing);
-      const dedupKey = clean.toLowerCase();
-      if (seen.has(dedupKey)) return;
-      seen.add(dedupKey);
-      const store = getEffectiveStore(itemKey, ing);
-      const list = store === 'wf' ? 'Whole Foods' : store === 'costco' ? 'Costco' : store === 'safeway' ? 'Safeway' : 'Trader Joes';
-      items.push({ item: clean, list });
-    });
+  list.forEach(it => {
+    // Skip checked-off items and anything already in pantry
+    if (it.checked || havePantryItem(it.item || it.name)) return;
+    const clean = it.name || ingCleanName(it);
+    const dedupKey = clean.toLowerCase();
+    if (seen.has(dedupKey)) return;
+    seen.add(dedupKey);
+    items.push({ item: clean, list: storeFull[it.store] || 'Trader Joes' });
   });
 
   const el = document.getElementById('alexaCommands');
@@ -5833,6 +5860,14 @@ function printSnapshot() {
     border-radius: 20px;
     white-space: nowrap;
   }
+
+  .grocery-del-btn {
+    background: none; border: none; color: var(--text-muted);
+    cursor: pointer; font-size: 13px; padding: 0 4px; opacity: 0.4;
+    flex: 0 0 auto; transition: opacity 0.15s, color 0.15s;
+  }
+  .ingredient-item:hover .grocery-del-btn { opacity: 0.7; }
+  .grocery-del-btn:hover { opacity: 1 !important; color: #c0392b; }
 </style></head>
     <body>${content}</body></html>`);
   win.document.close();
