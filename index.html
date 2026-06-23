@@ -5551,6 +5551,7 @@ function persistHaveIngredients() {
 }
 
 async function toggleHaveIngredient(itemName, rowEl) {
+  itemName = (itemName || '').toLowerCase();
   haveIngredients[itemName] = !haveIngredients[itemName];
   const have = haveIngredients[itemName];
   try {
