@@ -6517,7 +6517,7 @@ function robotAddToGrocery(items) {
 }
 
 // Manually add a single grocery item from a text box
-function addManualGroceryItem(rawName, store) {
+async function addManualGroceryItem(rawName, store) {
   if (!rawName) return;
   const key = getWeekKey(currentWeekOffset);
   if (!groceryLists[key]) groceryLists[key] = { items: [] };
@@ -6526,6 +6526,18 @@ function addManualGroceryItem(rawName, store) {
   if (!parts.name) return;
   const nk = parts.name.toLowerCase();
   if (list.items.some(x => x.name.toLowerCase() === nk)) { showToast('Already on the list'); return; }
+
+  // If it's in the pantry, confirm — then remove from pantry so it reaches the shopping list + Echo
+  if (havePantryItem(parts.name)) {
+    if (!confirm('You have "' + parts.name + '" in your pantry. Add it to the shopping list anyway?')) return;
+    // Remove from pantry (all matching entries)
+    Object.keys(haveIngredients).forEach(function(k){
+      if (k.toLowerCase() === nk || normalizeIngredient(k) === normalizeIngredient(parts.name)) delete haveIngredients[k];
+    });
+    try { await sb.delete('pantry', { family_id: FAMILY_ID, item_name: nk }); } catch(e) {}
+    persistHaveIngredients();
+  }
+
   list.items.push({
     key: nk, item: rawName, name: parts.name, amount: parts.amount,
     store: store || 'tj', qty: 1, checked: false, sources: [], pinned: true, manual: true
