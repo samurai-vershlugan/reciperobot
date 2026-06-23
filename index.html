@@ -3595,13 +3595,13 @@ function havePantryItem(itemName) {
   if (haveIngredients[itemName]) return true; // exact match fast path
   const norm = normalizeIngredient(itemName);
   if (!norm) return false;
-  // Check each pantry item normalized
   for (const k in haveIngredients) {
     if (!haveIngredients[k]) continue;
     const pn = normalizeIngredient(k);
     if (!pn) continue;
-    // Match if either contains the other (handles "paprika" vs "smoked paprika")
-    if (pn === norm || norm.includes(pn) || pn.includes(norm)) return true;
+    // Exact normalized match only (no loose substring — that caused false positives
+    // like pantry "salt" matching "kosher salt", or "apple" matching unrelated items)
+    if (pn === norm) return true;
   }
   return false;
 }
@@ -3715,7 +3715,6 @@ function renderAlexaCommands() {
 
   const seen = new Set();
   const items = [];
-  console.log('[Alexa] grocery list has', list.length, 'items:', list.map(x => x.name + (x.manual?'(manual)':'') + (x.checked?'[checked]':'') + (havePantryItem(x.item||x.name)?'[pantry]':'')).join(', '));
   list.forEach(it => {
     // Skip checked-off items and anything already in pantry
     if (it.checked || havePantryItem(it.item || it.name)) return;
