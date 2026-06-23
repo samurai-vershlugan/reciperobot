@@ -7186,8 +7186,11 @@ function openDiscoverEditModal(r) {
           <input id="deUrl" class="text-input" type="text" placeholder="https://..." style="margin-bottom:0;flex:1" oninput="onDeUrlChange()" />
           <button class="confirm-btn" id="deImportBtn" onclick="importRecipeFromUrl()" style="flex:0 0 auto;padding:8px 14px;white-space:nowrap;display:none">Import from URL</button>
         </div>
-        <label class="input-label">Image <span style="opacity:0.5;font-size:9px">(auto-filled from URL, or paste your own)</span></label>
-        <input id="deImage" class="text-input" type="text" placeholder="https://...image.jpg" style="margin-bottom:8px" oninput="updateDeImagePreview()" />
+        <label class="input-label">Image <span style="opacity:0.5;font-size:9px">(auto-filled from URL, or paste/upload your own)</span></label>
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <input id="deImage" class="text-input" type="text" placeholder="https://...image.jpg" style="margin-bottom:0;flex:1" oninput="updateDeImagePreview()" />
+          <button class="confirm-btn" onclick="uploadRecipeImage()" style="flex:0 0 auto;padding:8px 12px;white-space:nowrap;font-size:12px">📤 Upload</button>
+        </div>
         <div id="deImagePreview" style="display:none;margin-bottom:16px">
           <img id="deImagePreviewImg" style="width:100%;max-height:160px;object-fit:cover;border-radius:10px" alt="preview" />
         </div>
@@ -7237,6 +7240,7 @@ function closeDiscoverEditModal() {
 }
 
 let deOriginalUrl = '';
+let deUrlScrapeTimeout;
 
 function updateDeImagePreview() {
   const url = document.getElementById('deImage').value.trim();
@@ -7251,10 +7255,61 @@ function updateDeImagePreview() {
   }
 }
 
+async function scrapeImageFromUrl() {
+  const url = document.getElementById('deUrl').value.trim();
+  if (!url || !/^https?:\/\//.test(url)) return; // Silent fail if no valid URL
+  
+  // Don't scrape if image already set manually
+  if (document.getElementById('deImage').value.trim()) return;
+  
+  try {
+    const resp = await fetch(SUPABASE_URL + '/functions/v1/import-recipe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + AUTH_TOKEN },
+      body: JSON.stringify({ url })
+    });
+    const data = await resp.json();
+    
+    if (data.image) {
+      document.getElementById('deImage').value = data.image;
+      updateDeImagePreview();
+    }
+  } catch(e) {
+    // Silent fail — user can paste image URL manually if scrape fails
+  }
+}
+
+function uploadRecipeImage() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  input.onchange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    // Create a simple data URL (client-side, no server upload needed)
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const dataUrl = evt.target.result;
+      document.getElementById('deImage').value = dataUrl;
+      updateDeImagePreview();
+      showToast('Image ready to save');
+    };
+    reader.readAsDataURL(file);
+  };
+  input.click();
+}
+
 function onDeUrlChange() {
   const current = document.getElementById('deUrl').value.trim();
   const btn = document.getElementById('deImportBtn');
   if (btn) btn.style.display = (current && current !== deOriginalUrl) ? 'block' : 'none';
+  
+  // Auto-scrape image with debounce (wait 1.5s after user stops typing)
+  clearTimeout(deUrlScrapeTimeout);
+  if (current && /^https?:\/\//.test(current)) {
+    deUrlScrapeTimeout = setTimeout(() => scrapeImageFromUrl(), 1500);
+  }
 }
 
 async function importRecipeFromUrl() {
