@@ -3715,6 +3715,7 @@ function renderAlexaCommands() {
 
   const seen = new Set();
   const items = [];
+  console.log('[Alexa] grocery list has', list.length, 'items:', list.map(x => x.name + (x.manual?'(manual)':'') + (x.checked?'[checked]':'') + (havePantryItem(x.item||x.name)?'[pantry]':'')).join(', '));
   list.forEach(it => {
     // Skip checked-off items and anything already in pantry
     if (it.checked || havePantryItem(it.item || it.name)) return;
