@@ -2101,6 +2101,16 @@
   }
   .ingredient-item:hover .grocery-del-btn { opacity: 0.7; }
   .grocery-del-btn:hover { opacity: 1 !important; color: #c0392b; }
+
+  .meal-photo {
+    width: calc(100% + 28px);
+    margin: -14px -14px 10px;
+    height: 110px;
+    background-size: cover;
+    background-position: center;
+    cursor: pointer;
+    border-radius: 12px 12px 0 0;
+  }
 </style>
 
 <!-- ─── LOGIN SCREEN ─────────────────────────────────────────────────────── -->
@@ -3131,8 +3141,9 @@ function renderWeek() {
           </div>
         </div>
         <div class="day-meal">
+          ${(() => { const lm = getAllRecipes().find(r => r.name === meal.name) || meal; return lm.image ? `<div class="meal-photo meal-name-tappable" style="background-image:url('${lm.image}')"></div>` : ''; })()}
           <div class="meal-card-top">
-            <div class="meal-thumb meal-name-tappable">${mealEmoji(meal)}</div>
+            ${(() => { const lm = getAllRecipes().find(r => r.name === meal.name) || meal; return lm.image ? '' : `<div class="meal-thumb meal-name-tappable">${mealEmoji(meal)}</div>`; })()}
             <div class="meal-name meal-name-tappable">${getMealDisplayName(meal)}</div>
           </div>
           <div class="meal-card-mid">
@@ -5506,6 +5517,7 @@ async function loadCustomRecipes() {
           type: row.type_json || undefined,
           proteins: row.proteins_json || undefined,
           url: row.url || null,
+          image: row.image_url || null,
           custom: true,
           sbId: row.id
         });
@@ -5869,6 +5881,16 @@ function printSnapshot() {
   }
   .ingredient-item:hover .grocery-del-btn { opacity: 0.7; }
   .grocery-del-btn:hover { opacity: 1 !important; color: #c0392b; }
+
+  .meal-photo {
+    width: calc(100% + 28px);
+    margin: -14px -14px 10px;
+    height: 110px;
+    background-size: cover;
+    background-position: center;
+    cursor: pointer;
+    border-radius: 12px 12px 0 0;
+  }
 </style></head>
     <body>${content}</body></html>`);
   win.document.close();
@@ -7164,6 +7186,11 @@ function openDiscoverEditModal(r) {
           <input id="deUrl" class="text-input" type="text" placeholder="https://..." style="margin-bottom:0;flex:1" oninput="onDeUrlChange()" />
           <button class="confirm-btn" id="deImportBtn" onclick="importRecipeFromUrl()" style="flex:0 0 auto;padding:8px 14px;white-space:nowrap;display:none">Import from URL</button>
         </div>
+        <label class="input-label">Image <span style="opacity:0.5;font-size:9px">(auto-filled from URL, or paste your own)</span></label>
+        <input id="deImage" class="text-input" type="text" placeholder="https://...image.jpg" style="margin-bottom:8px" oninput="updateDeImagePreview()" />
+        <div id="deImagePreview" style="display:none;margin-bottom:16px">
+          <img id="deImagePreviewImg" style="width:100%;max-height:160px;object-fit:cover;border-radius:10px" alt="preview" />
+        </div>
         </div>
         <div style="display:flex;gap:6px;justify-content:space-between;align-items:center;flex:0 0 auto;padding-top:12px;border-top:1px solid var(--border);margin-top:4px;flex-wrap:nowrap">
           <button class="confirm-btn" style="background:transparent;border:1.5px solid var(--accent2);color:var(--accent2);white-space:nowrap;padding:7px 10px;font-size:11px" onclick="discoverSimilarFromEditor()">✦ Similar</button>
@@ -7185,6 +7212,8 @@ function openDiscoverEditModal(r) {
     .join('\n');
   document.getElementById('deSteps').value = (r.steps || []).join('\n');
   document.getElementById('deUrl').value = r.url || '';
+  document.getElementById('deImage').value = r.image || '';
+  updateDeImagePreview();
   deOriginalUrl = r.url || '';
   deCuisineSel = Array.isArray(r.cuisine) ? r.cuisine.slice() : [];
   deTypeSel = Array.isArray(r.type) ? r.type.slice() : [];
@@ -7208,6 +7237,19 @@ function closeDiscoverEditModal() {
 }
 
 let deOriginalUrl = '';
+
+function updateDeImagePreview() {
+  const url = document.getElementById('deImage').value.trim();
+  const wrap = document.getElementById('deImagePreview');
+  const img = document.getElementById('deImagePreviewImg');
+  if (url && /^https?:\/\//.test(url)) {
+    img.src = url;
+    img.onerror = function(){ wrap.style.display = 'none'; };
+    img.onload = function(){ wrap.style.display = 'block'; };
+  } else {
+    wrap.style.display = 'none';
+  }
+}
 
 function onDeUrlChange() {
   const current = document.getElementById('deUrl').value.trim();
@@ -7252,6 +7294,10 @@ async function importRecipeFromUrl() {
     }
     if (data.steps && data.steps.length) {
       document.getElementById('deSteps').value = data.steps.join('\n');
+    }
+    if (data.image && !document.getElementById('deImage').value.trim()) {
+      document.getElementById('deImage').value = data.image;
+      updateDeImagePreview();
     }
 
     showToast('Imported ' + (data.ingredients ? data.ingredients.length : 0) + ' ingredients!');
@@ -7309,11 +7355,13 @@ async function confirmDiscoverEdit() {
     return { item: item, name: parsed.name, amount: parsed.amount, store: DEFAULT_STORE };
   });
 
+  const imageUrl = document.getElementById('deImage').value.trim();
   const recipe = {
     name,
     tags: [cat, 'custom'].concat(deTags),
     shop: null,
     url: url || null,
+    image: imageUrl || null,
     ingredients,
     steps: stepLines.length ? stepLines : undefined,
     cuisine: deCuisineSel.length ? deCuisineSel.slice() : undefined,
@@ -7350,7 +7398,8 @@ async function confirmDiscoverEdit() {
           cuisine_json: deCuisineSel.length ? deCuisineSel : null,
           type_json: deTypeSel.length ? deTypeSel : null,
           proteins_json: deProteins.length ? deProteins : null,
-          url: url || null
+          url: url || null,
+          image_url: imageUrl || null
         })
       });
       if (!saveResp.ok) {
