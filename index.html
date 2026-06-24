@@ -2276,7 +2276,10 @@
     <div class="sidebar-section">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px">
         <h3 style="margin:0">🛒 Grocery List</h3>
-        <button class="login-back" onclick="regenerateGroceryList()" title="Rebuild from planned recipes" style="font-size:10px">↻ Regenerate</button>
+        <div style="display:flex;gap:6px;align-items:center">
+          <button class="login-back" onclick="clearCheckedGroceryItems()" title="Remove all crossed-off items" style="font-size:10px">✓ Clear done</button>
+          <button class="login-back" onclick="regenerateGroceryList()" title="Rebuild from planned recipes" style="font-size:10px">↻ Regenerate</button>
+        </div>
       </div>
       <div style="display:flex;gap:5px;margin-bottom:10px;align-items:center">
         <input id="manualGroceryInput" class="login-input" type="text" placeholder="Add an item..." style="margin-bottom:0;flex:1 1 auto;min-width:0;font-size:12px;padding:6px 10px" onkeydown="if(event.key==='Enter'){addManualGroceryItem(this.value.trim(), document.getElementById('manualGroceryStore').value);this.value='';}" />
@@ -3289,22 +3292,52 @@ function planIngredients(key) {
 
 // Reconcile the stored grocery list against the current plan
 // Adds new recipe items, removes orphaned recipe items (unless pinned or still needed)
+function groceryKey(name) {
+  // Single source of truth for matching grocery/pantry items.
+  // Normalize, and if that's empty fall back to lowercase.
+  return normalizeIngredient(name) || (name || '').toLowerCase().trim();
+}
+
+function dedupeGroceryItems(list) {
+  // Merge duplicate variants (e.g. "Cilantro" + "Cilantro Fresh") into one entry.
+  const seen = {};
+  const merged = [];
+  list.items.forEach(it => {
+    const k = groceryKey(it.name);
+    if (seen[k]) {
+      const keep = seen[k];
+      // Keep it unchecked if EITHER copy is unchecked (still needed)
+      if (!it.checked) keep.checked = false;
+      // Preserve pinned/manual flags and merge sources
+      keep.pinned = keep.pinned || it.pinned;
+      keep.manual = keep.manual || it.manual;
+      keep.sources = Array.from(new Set((keep.sources || []).concat(it.sources || [])));
+    } else {
+      seen[k] = it;
+      merged.push(it);
+    }
+  });
+  list.items = merged;
+}
+
 function syncGroceryList(key) {
   if (!groceryLists[key]) groceryLists[key] = { items: [] };
   const list = groceryLists[key];
+  // Collapse any pre-existing duplicate variants first
+  dedupeGroceryItems(list);
   const required = planIngredients(key);
 
-  // Group required by clean-name key
+  // Group required by normalized key
   const reqByName = {};
   required.forEach(r => {
-    const nk = r.name.toLowerCase();
+    const nk = groceryKey(r.name);
     if (!reqByName[nk]) reqByName[nk] = { name: r.name, item: r.item, amount: r.amount, store: r.store, recipes: new Set() };
     reqByName[nk].recipes.add(r.recipe);
   });
 
-  // Index existing items by clean-name key
+  // Index existing items by normalized key
   const existingByName = {};
-  list.items.forEach(it => { existingByName[it.name.toLowerCase()] = it; });
+  list.items.forEach(it => { existingByName[groceryKey(it.name)] = it; });
 
   // 1. Add or update recipe-sourced items
   const removed = list.removed || [];
@@ -3343,12 +3376,35 @@ function syncGroceryList(key) {
   // 2. Remove recipe-sourced items no longer required (unless pinned or manual)
   list.items = list.items.filter(it => {
     if (it.manual || it.pinned) return true; // user-owned, never auto-remove
-    if (reqByName[it.name.toLowerCase()]) return true; // still required
+    if (reqByName[groceryKey(it.name)]) return true; // still required
     return false; // orphaned recipe item — drop it
   });
 
   persistGroceryLists();
   persistWeekPlans();
+}
+
+function clearCheckedGroceryItems() {
+  const key = getWeekKey(currentWeekOffset);
+  const list = groceryLists[key];
+  if (!list || !list.items) return;
+  const checkedCount = list.items.filter(it => it.checked).length;
+  if (checkedCount === 0) { showToast('Nothing checked off to clear'); return; }
+  if (!confirm('Remove all ' + checkedCount + ' crossed-off item(s) from the list?')) return;
+  // For recipe-sourced checked items, suppress so sync won't re-add them this week
+  if (!list.removed) list.removed = [];
+  list.items.forEach(it => {
+    if (it.checked && !it.manual && it.sources && it.sources.length) {
+      const gk = groceryKey(it.name);
+      if (list.removed.indexOf(gk) === -1) list.removed.push(gk);
+    }
+  });
+  list.items = list.items.filter(it => !it.checked);
+  persistGroceryLists();
+  persistWeekPlans();
+  renderGroceryList();
+  renderAlexaCommands();
+  showToast('Cleared ' + checkedCount + ' item(s)');
 }
 
 function regenerateGroceryList(key) {
@@ -3468,7 +3524,8 @@ function deleteGroceryItem(it) {
   // If it was recipe-sourced, suppress it so syncGroceryList won't re-add it this week
   if (!it.manual && (it.sources && it.sources.length)) {
     if (!list.removed) list.removed = [];
-    if (list.removed.indexOf(it.name.toLowerCase()) === -1) list.removed.push(it.name.toLowerCase());
+    const gk = groceryKey(it.name);
+    if (list.removed.indexOf(gk) === -1) list.removed.push(gk);
   }
   persistGroceryLists();
   persistWeekPlans();
@@ -6667,12 +6724,10 @@ async function addManualGroceryItem(rawName, store) {
   const parts = parseIngredientParts(rawName);
   if (!parts.name) return;
   const nk = parts.name.toLowerCase();
-  const nn = normalizeIngredient(parts.name);
+  const gk = groceryKey(parts.name);
 
-  // If a matching item already exists on the list...
-  const existing = list.items.find(x =>
-    x.name.toLowerCase() === nk || normalizeIngredient(x.name) === nn
-  );
+  // If a matching item already exists on the list (normalized match)...
+  const existing = list.items.find(x => groceryKey(x.name) === gk);
   if (existing) {
     if (existing.checked) {
       // It's checked off (already bought / have it) — re-activate it instead of blocking
