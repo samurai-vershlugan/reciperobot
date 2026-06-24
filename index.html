@@ -3194,6 +3194,15 @@ try { const _gl = localStorage.getItem('mealos-grocery-lists'); if (_gl) grocery
 
 function persistGroceryLists() {
   try { localStorage.setItem('mealos-grocery-lists', JSON.stringify(groceryLists)); } catch(e) {}
+  // Sync to Supabase for each week
+  Object.keys(groceryLists).forEach(async wk => {
+    const glist = groceryLists[wk];
+    if (glist && FAMILY_ID) {
+      await sb.update('meal_plans', { family_id: FAMILY_ID, week_key: wk }, {
+        grocery_json: glist
+      });
+    }
+  });
 }
 
 // Build the set of ingredients the current plan's recipes require
