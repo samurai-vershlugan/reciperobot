@@ -7305,6 +7305,12 @@ function onDeUrlChange() {
   const btn = document.getElementById('deImportBtn');
   if (btn) btn.style.display = (current && current !== deOriginalUrl) ? 'block' : 'none';
   
+  // Clear image field when URL changes so auto-scrape gets fresh image
+  if (current && current !== deOriginalUrl) {
+    document.getElementById('deImage').value = '';
+    document.getElementById('deImagePreview').style.display = 'none';
+  }
+  
   // Auto-scrape image with debounce (wait 1.5s after user stops typing)
   clearTimeout(deUrlScrapeTimeout);
   if (current && /^https?:\/\//.test(current)) {
