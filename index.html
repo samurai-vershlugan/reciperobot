@@ -2166,6 +2166,22 @@
     color: var(--text-muted);
   }
   .import-url-row { display: flex; gap: 8px; }
+
+  .grocery-done-section { margin-top: 14px; border-top: 1px solid var(--border); padding-top: 8px; }
+  .grocery-done-header {
+    display: flex; align-items: center; gap: 6px;
+    width: 100%; background: none; border: none; cursor: pointer;
+    font-family: var(--font-mono, monospace);
+    font-size: 10px; letter-spacing: 1px; text-transform: uppercase;
+    color: var(--text-muted); padding: 6px 2px; text-align: left;
+  }
+  .grocery-done-header:hover { color: var(--text); }
+  .grocery-done-header .done-caret { font-size: 10px; width: 10px; }
+  .grocery-done-header .done-count {
+    background: var(--surface2); color: var(--text-muted);
+    border-radius: 10px; padding: 1px 7px; font-size: 9px;
+  }
+  .grocery-done-body { opacity: 0.7; }
 </style>
 
 <!-- ─── LOGIN SCREEN ─────────────────────────────────────────────────────── -->
@@ -3257,6 +3273,7 @@ function shopName(s) {
 // ─── PERSISTENT GROCERY LIST ENGINE ────────────────────────────────────────────
 // groceryLists[weekKey] = { items: [ {key, item, name, amount, store, qty, checked, sources:[], pinned} ] }
 let groceryLists = {};
+let groceryDoneExpanded = false; // crossed-off section collapsed by default
 try { const _gl = localStorage.getItem('mealos-grocery-lists'); if (_gl) groceryLists = JSON.parse(_gl); } catch(e) {}
 
 function persistGroceryLists() {
@@ -3440,8 +3457,59 @@ function renderGroceryList() {
     if (havePantryItem(it.item || it.name) && !it.manualUnchecked) it.checked = true;
   });
 
+  // Build a single grocery row element (shared by active + done sections)
+  function buildGroceryRow(it, sk) {
+    const div = document.createElement('div');
+    div.className = `ingredient-item ${it.checked ? 'checked' : ''}`;
+
+    const cbDiv = document.createElement('div');
+    cbDiv.className = 'ingredient-cb';
+    cbDiv.textContent = it.checked ? '✓' : '';
+    cbDiv.onclick = (e) => { e.stopPropagation(); toggleGroceryItem(it); };
+    div.appendChild(cbDiv);
+
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'ing-name ing-name-editable';
+    nameSpan.textContent = it.name;
+    nameSpan.title = 'Click to rename';
+    if (it.amount) {
+      const amt = document.createElement('span');
+      amt.className = 'ing-amount';
+      amt.textContent = it.amount;
+      nameSpan.appendChild(amt);
+    }
+    nameSpan.onclick = (e) => { e.stopPropagation(); renameGroceryListItem(it); };
+    div.appendChild(nameSpan);
+
+    div.appendChild(makeGroceryQtyStepper(it));
+
+    const sel = document.createElement('select');
+    sel.className = `store-select store-select-${it.store || 'tj'}`;
+    sel.onclick = (e) => e.stopPropagation();
+    sel.onchange = () => { it.store = sel.value; it.pinned = true; persistGroceryLists(); persistWeekPlans(); renderGroceryList(); renderAlexaCommands(); };
+    STORES.forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = s.id; opt.textContent = s.label;
+      if ((it.store || 'tj') === s.id) opt.selected = true;
+      sel.appendChild(opt);
+    });
+    div.appendChild(sel);
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'grocery-del-btn';
+    delBtn.textContent = '✕';
+    delBtn.title = 'Remove from list';
+    delBtn.onclick = (e) => { e.stopPropagation(); deleteGroceryItem(it); };
+    div.appendChild(delBtn);
+
+    return div;
+  }
+
+  const activeItems = list.items.filter(it => !it.checked);
+  const doneItems = list.items.filter(it => it.checked);
+
   const byStore = {}; STORES.forEach(s => byStore[s.id] = []);
-  list.items.forEach(it => {
+  activeItems.forEach(it => {
     const store = it.store || 'tj';
     (byStore[store] || byStore.tj).push(it);
   });
@@ -3456,61 +3524,31 @@ function renderGroceryList() {
     const group = document.createElement('div');
     group.className = 'grocery-store-group';
     group.innerHTML = `<div class="store-name ${cls}"><span class="store-dot"></span>${label}</div>`;
-
-    byStore[sk].sort((a, b) => {
-      const aC = a.checked ? 1 : 0, bC = b.checked ? 1 : 0;
-      if (aC !== bC) return aC - bC;
-      return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
-    });
-
-    byStore[sk].forEach(it => {
-      const div = document.createElement('div');
-      div.className = `ingredient-item ${it.checked ? 'checked' : ''}`;
-
-      const cbDiv = document.createElement('div');
-      cbDiv.className = 'ingredient-cb';
-      cbDiv.textContent = it.checked ? '✓' : '';
-      cbDiv.onclick = (e) => { e.stopPropagation(); toggleGroceryItem(it); };
-      div.appendChild(cbDiv);
-
-      const nameSpan = document.createElement('span');
-      nameSpan.className = 'ing-name ing-name-editable';
-      nameSpan.textContent = it.name;
-      nameSpan.title = 'Click to rename';
-      if (it.amount) {
-        const amt = document.createElement('span');
-        amt.className = 'ing-amount';
-        amt.textContent = it.amount;
-        nameSpan.appendChild(amt);
-      }
-      nameSpan.onclick = (e) => { e.stopPropagation(); renameGroceryListItem(it); };
-      div.appendChild(nameSpan);
-
-      div.appendChild(makeGroceryQtyStepper(it));
-
-      const sel = document.createElement('select');
-      sel.className = `store-select store-select-${sk}`;
-      sel.onclick = (e) => e.stopPropagation();
-      sel.onchange = () => { it.store = sel.value; it.pinned = true; persistGroceryLists(); persistWeekPlans(); renderGroceryList(); renderAlexaCommands(); };
-      STORES.forEach(s => {
-        const opt = document.createElement('option');
-        opt.value = s.id; opt.textContent = s.label;
-        if (sk === s.id) opt.selected = true;
-        sel.appendChild(opt);
-      });
-      div.appendChild(sel);
-
-      const delBtn = document.createElement('button');
-      delBtn.className = 'grocery-del-btn';
-      delBtn.textContent = '✕';
-      delBtn.title = 'Remove from list';
-      delBtn.onclick = (e) => { e.stopPropagation(); deleteGroceryItem(it); };
-      div.appendChild(delBtn);
-
-      group.appendChild(div);
-    });
+    byStore[sk].sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
+    byStore[sk].forEach(it => group.appendChild(buildGroceryRow(it, sk)));
     el.appendChild(group);
   });
+
+  // Collapsible "Done" section for crossed-off items
+  if (doneItems.length > 0) {
+    const doneWrap = document.createElement('div');
+    doneWrap.className = 'grocery-done-section';
+
+    const header = document.createElement('button');
+    header.className = 'grocery-done-header';
+    header.innerHTML = `<span class="done-caret">${groceryDoneExpanded ? '▾' : '▸'}</span> Done <span class="done-count">${doneItems.length}</span>`;
+    header.onclick = () => { groceryDoneExpanded = !groceryDoneExpanded; renderGroceryList(); };
+    doneWrap.appendChild(header);
+
+    if (groceryDoneExpanded) {
+      const body = document.createElement('div');
+      body.className = 'grocery-done-body';
+      doneItems.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
+      doneItems.forEach(it => body.appendChild(buildGroceryRow(it, it.store || 'tj')));
+      doneWrap.appendChild(body);
+    }
+    el.appendChild(doneWrap);
+  }
 
   updateConfirmBar();
 }
@@ -6058,6 +6096,22 @@ function printSnapshot() {
     color: var(--text-muted);
   }
   .import-url-row { display: flex; gap: 8px; }
+
+  .grocery-done-section { margin-top: 14px; border-top: 1px solid var(--border); padding-top: 8px; }
+  .grocery-done-header {
+    display: flex; align-items: center; gap: 6px;
+    width: 100%; background: none; border: none; cursor: pointer;
+    font-family: var(--font-mono, monospace);
+    font-size: 10px; letter-spacing: 1px; text-transform: uppercase;
+    color: var(--text-muted); padding: 6px 2px; text-align: left;
+  }
+  .grocery-done-header:hover { color: var(--text); }
+  .grocery-done-header .done-caret { font-size: 10px; width: 10px; }
+  .grocery-done-header .done-count {
+    background: var(--surface2); color: var(--text-muted);
+    border-radius: 10px; padding: 1px 7px; font-size: 9px;
+  }
+  .grocery-done-body { opacity: 0.7; }
 </style></head>
     <body>${content}</body></html>`);
   win.document.close();
