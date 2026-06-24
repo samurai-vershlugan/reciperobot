@@ -2182,6 +2182,134 @@
     border-radius: 10px; padding: 1px 7px; font-size: 9px;
   }
   .grocery-done-body { opacity: 0.7; }
+
+  /* Recipe browser card grid */
+  .recipe-card-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .mini-recipe-card {
+    position: relative;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .mini-recipe-card:hover { border-color: var(--accent2); box-shadow: 0 2px 10px rgba(44,26,14,0.07); }
+  .mini-recipe-thumb {
+    height: 74px;
+    background: var(--surface2);
+    background-size: cover;
+    background-position: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    cursor: pointer;
+  }
+  .mini-recipe-thumb.has-img { font-size: 0; }
+  .mini-recipe-name {
+    font-family: var(--font-display, serif);
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.2;
+    color: var(--text);
+    padding: 7px 8px 5px;
+    cursor: pointer;
+    flex: 1;
+  }
+  .mini-recipe-add {
+    margin: 0 8px 8px;
+    padding: 5px;
+    font-size: 10px;
+    font-family: var(--font-body, sans-serif);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    color: var(--accent2);
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .mini-recipe-add:hover { background: var(--accent2); color: #fff; }
+  .mini-recipe-del {
+    position: absolute;
+    top: 5px; right: 5px;
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: rgba(0,0,0,0.45);
+    color: #fff;
+    border: none;
+    font-size: 11px;
+    line-height: 1;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+  .mini-recipe-card:hover .mini-recipe-del { opacity: 1; }
+  .recipe-show-more {
+    width: 100%;
+    margin-top: 10px;
+    padding: 8px;
+    background: none;
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    color: var(--text-muted);
+    font-family: var(--font-mono, monospace);
+    font-size: 10px;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .recipe-show-more:hover { border-color: var(--accent2); color: var(--text); }
+
+  /* Quick day picker popover */
+  .quick-day-picker {
+    position: fixed;
+    bottom: 24px; left: 50%;
+    transform: translateX(-50%);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px 16px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.18);
+    z-index: 2000;
+    max-width: 90vw;
+  }
+  .quick-day-label {
+    font-family: var(--font-body, sans-serif);
+    font-size: 12px;
+    color: var(--text);
+    margin-bottom: 10px;
+    text-align: center;
+  }
+  .quick-day-row { display: flex; gap: 6px; justify-content: center; }
+  .quick-day-btn {
+    width: 44px; height: 40px;
+    border-radius: 9px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text);
+    font-family: var(--font-mono, monospace);
+    font-size: 11px;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+  }
+  .quick-day-btn:hover { background: var(--accent2); color: #fff; border-color: var(--accent2); }
+  .quick-day-cancel {
+    display: block;
+    width: 100%;
+    margin-top: 10px;
+    padding: 6px;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 11px;
+    cursor: pointer;
+  }
 </style>
 
 <!-- ─── LOGIN SCREEN ─────────────────────────────────────────────────────── -->
@@ -2280,7 +2408,7 @@
       </button>
       <button class="add-library-btn" onclick="openAddLibraryModal()">＋ Add Recipe</button>
     </div>
-    <div id="recipeBrowser" style="display:none">
+    <div id="recipeBrowser">
       <input id="recipeSearchInput" class="text-input" type="text" placeholder="Search recipes..." style="width:100%;box-sizing:border-box;margin-bottom:8px" oninput="renderRotationGrid()" />
       <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px" id="recipeCuisineFilters"></div>
       <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px" id="recipeProteinFilters"></div>
@@ -4555,6 +4683,7 @@ function toggleRotationLibrary(forceOpen) {
 let recipeSearchProtein = null;
 let recipeSearchCuisine = null;
 let recipeSearchType = null;
+let recipeBrowserExpanded = false;
 
 // Two clean axes. Cuisine = regional style. Type = dish format / protein.
 const CUISINE_FILTERS = ['Mexican','Mediterranean','American','Asian','Italian'];
@@ -4591,11 +4720,34 @@ function recipeTypes(r) {
   return [...out];
 }
 
+function getActiveCuisineOptions() {
+  // Standard cuisines first, then any custom ones present on actual recipes
+  const opts = CUISINE_FILTERS.slice();
+  const seen = new Set(opts.map(o => o.toLowerCase()));
+  Object.values(RECIPES).flat().forEach(r => {
+    recipeCuisines(r).forEach(c => {
+      if (c && !seen.has(c.toLowerCase())) { seen.add(c.toLowerCase()); opts.push(c); }
+    });
+  });
+  return opts;
+}
+
+function getActiveProteinOptions() {
+  const opts = TYPE_FILTERS.slice();
+  const seen = new Set(opts.map(o => o.toLowerCase()));
+  Object.values(RECIPES).flat().forEach(r => {
+    recipeTypes(r).forEach(p => {
+      if (p && !seen.has(p.toLowerCase())) { seen.add(p.toLowerCase()); opts.push(p); }
+    });
+  });
+  return opts;
+}
+
 function renderRecipeFilters() {
   const cEl = document.getElementById('recipeCuisineFilters');
   if (cEl) {
     cEl.innerHTML = '<span style="font-family:var(--font-mono,monospace);font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);align-self:center;margin-right:4px">Cuisine:</span>';
-    CUISINE_FILTERS.forEach(label => {
+    getActiveCuisineOptions().forEach(label => {
       const btn = document.createElement('button');
       btn.className = 'cat-btn' + (recipeSearchCuisine === label ? ' active' : '');
       btn.textContent = label;
@@ -4610,7 +4762,7 @@ function renderRecipeFilters() {
   const pEl = document.getElementById('recipeProteinFilters');
   if (pEl) {
     pEl.innerHTML = '<span style="font-family:var(--font-mono,monospace);font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);align-self:center;margin-right:4px">Protein:</span>';
-    TYPE_FILTERS.forEach(label => {
+    getActiveProteinOptions().forEach(label => {
       const btn = document.createElement('button');
       btn.className = 'cat-btn' + (recipeSearchType === label ? ' active' : '');
       btn.textContent = label;
@@ -4627,6 +4779,50 @@ function renderRecipeFilters() {
 function allDaysLocked() {
   const key = getWeekKey(currentWeekOffset);
   return [0,1,2,3,4].every(i => !!lockedDays[getLockKey(key, i)]);
+}
+
+function quickAddRecipeToDay(recipeName) {
+  // Show a compact day picker popover, then assign
+  const existing = document.getElementById('quickDayPicker');
+  if (existing) existing.remove();
+
+  const pop = document.createElement('div');
+  pop.id = 'quickDayPicker';
+  pop.className = 'quick-day-picker';
+  const label = document.createElement('div');
+  label.className = 'quick-day-label';
+  label.textContent = 'Add "' + recipeName + '" to:';
+  pop.appendChild(label);
+
+  const row = document.createElement('div');
+  row.className = 'quick-day-row';
+  SHORT_DAYS.forEach((d, i) => {
+    const b = document.createElement('button');
+    b.className = 'quick-day-btn';
+    b.textContent = d;
+    b.onclick = () => {
+      assignRecipeToDay(recipeName, i);
+      pop.remove();
+      showToast('Added "' + recipeName + '" to ' + DAYS[i]);
+    };
+    row.appendChild(b);
+  });
+  pop.appendChild(row);
+
+  const cancel = document.createElement('button');
+  cancel.className = 'quick-day-cancel';
+  cancel.textContent = 'Cancel';
+  cancel.onclick = () => pop.remove();
+  pop.appendChild(cancel);
+
+  document.body.appendChild(pop);
+  // Dismiss on outside click
+  setTimeout(() => {
+    const handler = (e) => {
+      if (!pop.contains(e.target)) { pop.remove(); document.removeEventListener('click', handler); }
+    };
+    document.addEventListener('click', handler);
+  }, 50);
 }
 
 function renderRotationGrid() {
@@ -4666,35 +4862,71 @@ function renderRotationGrid() {
   count.textContent = all.length + ' recipe' + (all.length !== 1 ? 's' : '');
   el.appendChild(count);
 
-  const items = document.createElement('div');
-  items.className = 'rot-items';
-  all.forEach(r => {
-    const row = document.createElement('div');
-    row.className = `rotation-item${r.custom ? ' rotation-item-custom' : ''}`;
-    const nameSpan = document.createElement('span');
-    nameSpan.textContent = r.name;
-    if (r.proteins && r.proteins.length) {
-      const hint = document.createElement('span');
-      hint.style.cssText = 'font-family:"DM Mono",monospace;font-size:9px;color:var(--text-muted);margin-left:5px;opacity:0.6;';
-      hint.textContent = r.proteins.map(p => p.label).join(' / ');
-      nameSpan.appendChild(hint);
+  // Limit to a preview count unless expanded (or actively searching/filtering)
+  const isFiltering = !!(q || recipeSearchCuisine || recipeSearchType);
+  const PREVIEW = 6;
+  const showAll = recipeBrowserExpanded || isFiltering;
+  const shown = showAll ? all : all.slice(0, PREVIEW);
+
+  const grid = document.createElement('div');
+  grid.className = 'recipe-card-grid';
+  shown.forEach(r => {
+    const card = document.createElement('div');
+    card.className = 'mini-recipe-card';
+
+    // Image or emoji
+    const thumb = document.createElement('div');
+    thumb.className = 'mini-recipe-thumb';
+    if (r.image) {
+      thumb.style.backgroundImage = `url('${r.image}')`;
+      thumb.classList.add('has-img');
+    } else {
+      thumb.textContent = mealEmoji({ name: r.name });
     }
+    thumb.addEventListener('click', () => openRecipeModal(r.name));
+    card.appendChild(thumb);
+
+    // Name
+    const nameSpan = document.createElement('div');
+    nameSpan.className = 'mini-recipe-name';
+    nameSpan.textContent = r.name;
     nameSpan.addEventListener('click', () => openRecipeModal(r.name));
-    row.appendChild(nameSpan);
+    card.appendChild(nameSpan);
+
+    // Quick add-to-day button
+    const addBtn = document.createElement('button');
+    addBtn.className = 'mini-recipe-add';
+    addBtn.textContent = '＋ Add to day';
+    addBtn.addEventListener('click', (e) => { e.stopPropagation(); quickAddRecipeToDay(r.name); });
+    card.appendChild(addBtn);
+
+    // Delete for custom recipes
     if (r.custom) {
       const del = document.createElement('button');
-      del.className = 'rot-delete-btn';
+      del.className = 'mini-recipe-del';
       del.title = 'Remove';
       del.textContent = '✕';
       del.addEventListener('click', (e) => {
         e.stopPropagation();
         deleteRecipeFromLibrary(r.name, (r.tags||[]).find(t => t !== 'custom') || 'other');
       });
-      row.appendChild(del);
+      card.appendChild(del);
     }
-    items.appendChild(row);
+
+    grid.appendChild(card);
   });
-  el.appendChild(items);
+  el.appendChild(grid);
+
+  // Show more / less toggle
+  if (!isFiltering && all.length > PREVIEW) {
+    const moreBtn = document.createElement('button');
+    moreBtn.className = 'recipe-show-more';
+    moreBtn.textContent = recipeBrowserExpanded
+      ? '▴ Show less'
+      : `▾ Show all ${all.length} recipes`;
+    moreBtn.onclick = () => { recipeBrowserExpanded = !recipeBrowserExpanded; renderRotationGrid(); };
+    el.appendChild(moreBtn);
+  }
 }
 
 
@@ -5416,6 +5648,8 @@ async function bootApp() {
   }
   loadTagOverrides();
   renderWeek();
+  renderRecipeFilters();
+  renderRotationGrid();
   loadHistory();
   loadCustomRecipes();
   initWakeWord();
@@ -6112,6 +6346,134 @@ function printSnapshot() {
     border-radius: 10px; padding: 1px 7px; font-size: 9px;
   }
   .grocery-done-body { opacity: 0.7; }
+
+  /* Recipe browser card grid */
+  .recipe-card-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .mini-recipe-card {
+    position: relative;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .mini-recipe-card:hover { border-color: var(--accent2); box-shadow: 0 2px 10px rgba(44,26,14,0.07); }
+  .mini-recipe-thumb {
+    height: 74px;
+    background: var(--surface2);
+    background-size: cover;
+    background-position: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    cursor: pointer;
+  }
+  .mini-recipe-thumb.has-img { font-size: 0; }
+  .mini-recipe-name {
+    font-family: var(--font-display, serif);
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.2;
+    color: var(--text);
+    padding: 7px 8px 5px;
+    cursor: pointer;
+    flex: 1;
+  }
+  .mini-recipe-add {
+    margin: 0 8px 8px;
+    padding: 5px;
+    font-size: 10px;
+    font-family: var(--font-body, sans-serif);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    color: var(--accent2);
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .mini-recipe-add:hover { background: var(--accent2); color: #fff; }
+  .mini-recipe-del {
+    position: absolute;
+    top: 5px; right: 5px;
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: rgba(0,0,0,0.45);
+    color: #fff;
+    border: none;
+    font-size: 11px;
+    line-height: 1;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+  .mini-recipe-card:hover .mini-recipe-del { opacity: 1; }
+  .recipe-show-more {
+    width: 100%;
+    margin-top: 10px;
+    padding: 8px;
+    background: none;
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    color: var(--text-muted);
+    font-family: var(--font-mono, monospace);
+    font-size: 10px;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .recipe-show-more:hover { border-color: var(--accent2); color: var(--text); }
+
+  /* Quick day picker popover */
+  .quick-day-picker {
+    position: fixed;
+    bottom: 24px; left: 50%;
+    transform: translateX(-50%);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px 16px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.18);
+    z-index: 2000;
+    max-width: 90vw;
+  }
+  .quick-day-label {
+    font-family: var(--font-body, sans-serif);
+    font-size: 12px;
+    color: var(--text);
+    margin-bottom: 10px;
+    text-align: center;
+  }
+  .quick-day-row { display: flex; gap: 6px; justify-content: center; }
+  .quick-day-btn {
+    width: 44px; height: 40px;
+    border-radius: 9px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text);
+    font-family: var(--font-mono, monospace);
+    font-size: 11px;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+  }
+  .quick-day-btn:hover { background: var(--accent2); color: #fff; border-color: var(--accent2); }
+  .quick-day-cancel {
+    display: block;
+    width: 100%;
+    margin-top: 10px;
+    padding: 6px;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 11px;
+    cursor: pointer;
+  }
 </style></head>
     <body>${content}</body></html>`);
   win.document.close();
