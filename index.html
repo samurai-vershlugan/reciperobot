@@ -6171,18 +6171,27 @@ async function pantryAddItem() {
 }
 
 async function pantryRemoveItem(item) {
-  delete haveIngredients[item];
+  // Remove the exact key AND any normalized-matching variants (prevents pantry ghosts)
+  const targetNorm = normalizeIngredient(item);
+  const toDelete = Object.keys(haveIngredients).filter(function(k){
+    return k === item || k.toLowerCase() === item.toLowerCase() || normalizeIngredient(k) === targetNorm;
+  });
+  toDelete.forEach(function(k){ delete haveIngredients[k]; });
+  persistHaveIngredients();
   if (FAMILY_ID && AUTH_TOKEN) {
-    try {
-      await fetch(SUPABASE_URL + '/rest/v1/pantry?family_id=eq.' + FAMILY_ID + '&item_name=eq.' + encodeURIComponent(item), {
-        method: 'DELETE',
-        headers: {
-          'apikey': SUPABASE_KEY,
-          'Authorization': 'Bearer ' + AUTH_TOKEN,
-          'Prefer': 'return=minimal'
-        }
-      });
-    } catch(e) { console.warn('Pantry remove error:', e); }
+    // Delete every matching variant from Supabase too
+    for (const k of toDelete) {
+      try {
+        await fetch(SUPABASE_URL + '/rest/v1/pantry?family_id=eq.' + FAMILY_ID + '&item_name=eq.' + encodeURIComponent(k), {
+          method: 'DELETE',
+          headers: {
+            'apikey': SUPABASE_KEY,
+            'Authorization': 'Bearer ' + AUTH_TOKEN,
+            'Prefer': 'return=minimal'
+          }
+        });
+      } catch(e) { console.warn('Pantry remove error:', e); }
+    }
   }
   renderPantryItems();
   showToast('Removed "' + item + '" from pantry');
@@ -6658,7 +6667,28 @@ async function addManualGroceryItem(rawName, store) {
   const parts = parseIngredientParts(rawName);
   if (!parts.name) return;
   const nk = parts.name.toLowerCase();
-  if (list.items.some(x => x.name.toLowerCase() === nk)) { showToast('Already on the list'); return; }
+  const nn = normalizeIngredient(parts.name);
+
+  // If a matching item already exists on the list...
+  const existing = list.items.find(x =>
+    x.name.toLowerCase() === nk || normalizeIngredient(x.name) === nn
+  );
+  if (existing) {
+    if (existing.checked) {
+      // It's checked off (already bought / have it) — re-activate it instead of blocking
+      existing.checked = false;
+      existing.manualUnchecked = true;
+      existing.pinned = true;
+      persistGroceryLists();
+      renderGroceryList();
+      renderAlexaCommands();
+      persistWeekPlans();
+      showToast('Back on the list: "' + existing.name + '"');
+    } else {
+      showToast('Already on the list');
+    }
+    return;
+  }
 
   // If it's in the pantry, confirm — then remove from pantry so it reaches the shopping list + Echo
   if (havePantryItem(parts.name)) {
