@@ -2276,7 +2276,6 @@
 <div class="modal-overlay" id="recipeModal" onclick="closeRecipeModal(event)">
   <div class="modal recipe-modal" style="position:relative;max-width:460px;width:94%;max-height:90vh;display:flex;flex-direction:column">
     <button class="modal-close" onclick="document.getElementById('recipeModal').classList.remove('open')">×</button>
-    <div id="recipeModalImageBanner" style="width:100%;height:200px;background-size:cover;background-position:center;margin-bottom:12px;border-radius:0 0 12px 12px;display:none"></div>
     <div class="recipe-modal-header">
       <div id="recipeModalTitle" class="recipe-modal-name"></div>
       <div id="recipeModalTags" class="recipe-modal-tags"></div>
@@ -2566,7 +2565,7 @@ const RECIPES = {
       ingredients: [{item:"bone-in chicken thighs (2 lbs)",store:"costco"},{item:"lemon",store:"tj"},{item:"shallot",store:"tj"},{item:"garlic",store:"tj"},{item:"olive oil",store:"costco"},{item:"dried oregano",store:"tj"},{item:"paprika",store:"costco"},{item:"fresh parsley",store:"tj"}] },
     { name: "Mama's Chicken Thighs", tags:["chicken","quick","kid-friendly"], shop:"costco",
       ingredients: [{item:"bone-in chicken thighs",store:"costco"},{item:"olive oil",store:"costco"},{item:"garlic",store:"tj"},{item:"paprika",store:"costco"},{item:"lemon",store:"tj"}] },
-    { name: "Teriyaki Chicken", tags:["chicken","quick","kid-friendly","dairy-free"], shop:"costco", image:"https://commons.wikimedia.org/wiki/Special:FilePath/Yakitori%20(Teriyaki%20Chicken%20Skewers).jpg?width=800",
+    { name: "Teriyaki Chicken", tags:["chicken","quick","kid-friendly","dairy-free"], shop:"costco",
       ingredients: [{item:"chicken thighs",store:"costco"},{item:"soy sauce",store:"tj"},{item:"brown sugar",store:"costco"},{item:"garlic",store:"tj"},{item:"ginger",store:"tj"},{item:"white jasmine rice",store:"tj"},{item:"broccoli",store:"costco"}] },
     { name: "Chicken Wings", tags:["chicken","quick","kid-friendly","gluten-free","dairy-free"], shop:"costco",
       ingredients: [{item:"frozen chicken wings",store:"costco"},{item:"hot sauce",store:"tj"},{item:"butter",store:"costco"},{item:"celery",store:"costco"},{item:"carrots",store:"costco"},{item:"ranch dressing",store:"costco"}] },
@@ -2594,7 +2593,7 @@ const RECIPES = {
       ingredients: [{item:"white jasmine rice",store:"tj"},{item:"black beans",store:"tj"},{item:"salsa",store:"costco"},{item:"avocado",store:"costco"},{item:"shredded Mexican cheese",store:"costco"},{item:"lime",store:"tj"},{item:"fresh cilantro",store:"tj"}] },
     { name: "Carne Asada Tacos", tags:["taco","gluten-free","dairy-free","spicy"], shop:"costco",
       ingredients: [{item:"skirt steak",store:"costco"},{item:"flour tortillas",store:"tj"},{item:"lime",store:"tj"},{item:"fresh cilantro",store:"tj"},{item:"onion",store:"tj"},{item:"jalapeño",store:"tj"},{item:"roma tomatoes (2)",store:"tj"},{item:"avocado",store:"costco"}] },
-    { name: "Chicken Enchiladas", tags:["taco","kid-friendly"], shop:"costco", image:"https://commons.wikimedia.org/wiki/Special:FilePath/Slow%20Cooker%20Chicken%20Enchilada%20Soup%20(27729096715).jpg?width=800",
+    { name: "Chicken Enchiladas", tags:["taco","kid-friendly"], shop:"costco",
       ingredients: [{item:"chicken thighs",store:"costco"},{item:"flour tortillas",store:"costco"},{item:"enchilada sauce",store:"tj"},{item:"shredded Mexican cheese",store:"costco"},{item:"sour cream",store:"tj"},{item:"fresh cilantro",store:"tj"}] },
     { name: "Chicken Parm Tacos", tags:["taco","quick","kid-friendly"], shop:"costco",
       steps: [
@@ -2664,7 +2663,7 @@ const RECIPES = {
         { label: "Marinara",    item: null,            store: null,     displayName: "Spaghetti (Marinara)"   }
       ],
       ingredients: [{item:"pasta",store:"costco"},{item:"marinara sauce",store:"costco"},{item:"garlic",store:"tj"},{item:"yellow onion",store:"tj"},{item:"grated parmesan",store:"costco"}] },
-    { name: "Shrimp & Pasta", tags:["pasta","fish","quick","date-night"], shop:"costco", image:"https://commons.wikimedia.org/wiki/Special:FilePath/Pasta%20pesto%20%26%20shrimps%20(18842211823).jpg?width=800",
+    { name: "Shrimp & Pasta", tags:["pasta","fish","quick","date-night"], shop:"costco",
       ingredients: [{item:"shrimp",store:"costco"},{item:"linguine",store:"tj"},{item:"butter",store:"costco"},{item:"garlic",store:"tj"},{item:"white wine",store:"tj"},{item:"lemon",store:"tj"},{item:"fresh parsley",store:"tj"},{item:"grated parmesan",store:"costco"}] },
     { name: "Mac & Cheese", tags:["pasta","quick","kid-friendly","vegetarian"], shop:"costco",
       ingredients: [{item:"Annie's mac & cheese",store:"costco"},{item:"butter",store:"costco"},{item:"whole milk",store:"costco"}] },
@@ -2676,7 +2675,7 @@ const RECIPES = {
       ingredients: [{item:"ramen noodles",store:"tj"},{item:"chicken broth",store:"costco"},{item:"eggs",store:"costco"},{item:"green onions",store:"tj"},{item:"soy sauce",store:"tj"},{item:"sesame oil",store:"tj"},{item:"garlic",store:"tj"},{item:"ginger",store:"tj"},{item:"miso paste",store:"tj"}] },
   ],
   fish: [
-    { name: "Grilled Bowl", tags:["fish","quick","gluten-free","dairy-free","spicy"], shop:"costco", image:"https://commons.wikimedia.org/wiki/Special:FilePath/Vietnamese%20bowl%20of%20grilled%20pork%2C%20bun%20thit%20nuong.jpg?width=800",
+    { name: "Grilled Bowl", tags:["fish","quick","gluten-free","dairy-free","spicy"], shop:"costco",
       proteins: [
         { label: "Salmon", item: "wild salmon fillets", store: "costco", displayName: "Grilled Salmon Bowl" },
         { label: "Shrimp", item: "shrimp",              store: "costco", displayName: "Grilled Shrimp Bowl" }
@@ -2684,7 +2683,7 @@ const RECIPES = {
       ingredients: [{item:"olive oil",store:"costco"},{item:"paprika",store:"costco"},{item:"cayenne pepper",store:"tj"},{item:"frozen corn",store:"tj"},{item:"red onion",store:"tj"},{item:"fresh cilantro",store:"tj"},{item:"jalapeño",store:"tj"},{item:"lime",store:"tj"},{item:"mayonnaise",store:"tj"},{item:"sour cream",store:"tj"},{item:"garlic",store:"tj"},{item:"avocado",store:"costco"},{item:"sesame seeds",store:"tj"},{item:"green onions",store:"tj"},{item:"white jasmine rice",store:"tj"}] },
     { name: "Salmon Rice Bowl", tags:["fish","quick","gluten-free","dairy-free","meal-prep"], shop:"costco",
       ingredients: [{item:"wild salmon fillets",store:"costco"},{item:"white jasmine rice",store:"tj"},{item:"soy sauce",store:"tj"},{item:"cucumber",store:"tj"},{item:"avocado",store:"costco"},{item:"sesame seeds",store:"tj"},{item:"green onions",store:"tj"},{item:"rice vinegar",store:"tj"}] },
-    { name: "Grilled Salmon", tags:["fish","quick","gluten-free","dairy-free","date-night"], shop:"costco", image:"https://commons.wikimedia.org/wiki/Special:FilePath/Flame%20grilled%20salmon%20steaks%20(herb%20marinade%20recipe).jpg?width=800",
+    { name: "Grilled Salmon", tags:["fish","quick","gluten-free","dairy-free","date-night"], shop:"costco",
       ingredients: [{item:"wild salmon fillets",store:"costco"},{item:"olive oil",store:"costco"},{item:"lemon",store:"tj"},{item:"garlic",store:"tj"},{item:"white jasmine rice",store:"tj"},{item:"green beans",store:"costco"}] },
     { name: "Salmon Cakes", tags:["fish","gluten-free","dairy-free"], shop:"costco", url:"https://www.foodnetwork.com/recipes/food-network-kitchen/salmon-cakes-with-salad-recipe-2043638",
       ingredients: [{item:"wild salmon fillets",store:"costco"},{item:"panko breadcrumbs",store:"tj"},{item:"eggs",store:"costco"},{item:"lemon",store:"tj"},{item:"fresh parsley",store:"tj"},{item:"mayonnaise",store:"tj"},{item:"salad greens",store:"costco"}] },
@@ -2769,9 +2768,15 @@ const RECIPES = {
     { name: "Shabbat Roast Chicken", tags:["chicken","shabbat","gluten-free","dairy-free","meal-prep"], shop:"costco",
       friday: true,
       ingredients: [{item:"whole organic chicken",store:"costco"},{item:"garlic",store:"tj"},{item:"lemon",store:"tj"},{item:"fresh thyme & rosemary",store:"tj"},{item:"challah",store:"tj"},{item:"carrots",store:"costco"},{item:"sweet potatoes",store:"tj"},{item:"red onion",store:"tj"},{item:"salad greens",store:"costco"}] },
+    { name: "Chicken Soup + Roast Chicken", tags:["soup","chicken","shabbat","dairy-free","kid-friendly"], shop:"costco",
+      friday: true,
+      ingredients: [{item:"whole organic chicken",store:"costco"},{item:"carrots",store:"costco"},{item:"celery",store:"costco"},{item:"yellow onion",store:"tj"},{item:"parsnip",store:"safeway"},{item:"fresh dill",store:"tj"},{item:"egg noodles",store:"tj"},{item:"challah",store:"tj"},{item:"salad greens",store:"costco"}] },
     { name: "Whole Foods Pizza Night", tags:["quick","kid-friendly"], shop:"wf",
       friday: true,
       ingredients: [{item:"pizza (WF hot bar or take-and-bake)",store:"wf"},{item:"salad greens",store:"costco"},{item:"sparkling water",store:"tj"}] },
+    { name: "Shawarma Friday", tags:["chicken","shabbat","dairy-free"], shop:"costco",
+      friday: true,
+      ingredients: [{item:"chicken thighs",store:"costco"},{item:"pita bread",store:"tj"},{item:"Greek yogurt",store:"tj"},{item:"cucumber",store:"tj"},{item:"tomatoes",store:"costco"},{item:"challah",store:"tj"},{item:"hummus",store:"costco"}] },
   ],
   easy: [
     { name: "Leftovers Night", tags:["quick","kid-friendly"], shop:null, ingredients: [] },
@@ -2789,7 +2794,7 @@ const RECIPES = {
       ingredients: [{item:"boneless chicken thighs",store:"costco"},{item:"BBQ sauce",store:"costco"},{item:"Hawaiian rolls",store:"costco"},{item:"coleslaw mix",store:"costco"},{item:"apple cider vinegar",store:"tj"},{item:"honey",store:"tj"}] },
     { name: "White Bean & Turkey Chili", tags:["slowcooker","gluten-free","dairy-free","meal-prep"], shop:"costco",
       ingredients: [{item:"ground turkey",store:"costco"},{item:"white beans",store:"tj"},{item:"chicken broth",store:"costco"},{item:"diced green chiles",store:"costco"},{item:"onion",store:"tj"},{item:"garlic",store:"tj"},{item:"cumin",store:"tj"},{item:"oregano",store:"tj"},{item:"shredded Mexican cheese",store:"costco"},{item:"sour cream",store:"tj"}] },
-    { name: "Beef Ragu", tags:["slowcooker","dairy-free","meal-prep","kid-friendly"], shop:"costco", image:"https://commons.wikimedia.org/wiki/Special:FilePath/Wild%20Garlic%20Gnocchi%20and%20Beef%20Cheek%20Ragu.jpg?width=800",
+    { name: "Beef Ragu", tags:["slowcooker","dairy-free","meal-prep","kid-friendly"], shop:"costco",
       ingredients: [{item:"beef chuck roast",store:"costco"},{item:"marinara sauce",store:"costco"},{item:"onion",store:"tj"},{item:"garlic",store:"tj"},{item:"red wine",store:"tj"},{item:"Italian seasoning",store:"tj"},{item:"parmesan",store:"costco"},{item:"pasta",store:"costco"}] },
     { name: "Honey Garlic Chicken", tags:["slowcooker","chicken","quick","kid-friendly","dairy-free","meal-prep"], shop:"costco",
       ingredients: [{item:"boneless chicken thighs",store:"costco"},{item:"honey",store:"tj"},{item:"soy sauce",store:"tj"},{item:"garlic",store:"tj"},{item:"sesame oil",store:"tj"},{item:"white jasmine rice",store:"tj"},{item:"green onions",store:"tj"},{item:"sesame seeds",store:"tj"}] },
@@ -2822,6 +2827,8 @@ const RECIPES = {
         {item:"fresh parsley",                               store:"tj"},
         {item:"white jasmine rice",                          store:"tj"}
       ] },
+    { name: "Chicken Shawarma", tags:["mediterranean","quick","dairy-free","gluten-free"], shop:"costco", url:"https://www.recipetineats.com/chicken-shawarma-middle-eastern/",
+      ingredients: [{item:"chicken thighs",store:"costco"},{item:"pita bread",store:"tj"},{item:"cucumber",store:"tj"},{item:"tomatoes",store:"costco"},{item:"red onion",store:"tj"},{item:"hummus",store:"costco"},{item:"olives",store:"tj"},{item:"fresh parsley",store:"tj"},{item:"lemon",store:"tj"},{item:"garlic",store:"tj"}] },
     { name: "Mediterranean Pitas", tags:["mediterranean","quick","meal-prep"], shop:"costco",
       prepIds: ["lemon-oregano-marinade","garlic-yogurt-marinade","yogurt-lemon-sauce","tahini-dressing"],
       proteins: [
@@ -2945,8 +2952,10 @@ function pickRandom(arr) {
 }
 
 function pickFriday() {
-  // Pick from all recipes, no special restriction
-  return pickRandom(getAllRecipes());
+  // Bias toward chicken soup 50% of the time
+  const r = Math.random();
+  if (r < 0.5) return RECIPES.friday_special.find(r => r.name.includes("Chicken Soup"));
+  return pickRandom(RECIPES.friday_special);
 }
 
 function generateWeekPlan() {
@@ -3194,15 +3203,6 @@ try { const _gl = localStorage.getItem('mealos-grocery-lists'); if (_gl) grocery
 
 function persistGroceryLists() {
   try { localStorage.setItem('mealos-grocery-lists', JSON.stringify(groceryLists)); } catch(e) {}
-  // Sync to Supabase for each week
-  Object.keys(groceryLists).forEach(async wk => {
-    const glist = groceryLists[wk];
-    if (glist && FAMILY_ID) {
-      await sb.update('meal_plans', { family_id: FAMILY_ID, week_key: wk }, {
-        grocery_json: glist
-      });
-    }
-  });
 }
 
 // Build the set of ingredients the current plan's recipes require
@@ -3597,8 +3597,8 @@ function normalizeIngredient(name) {
   s = s.split(',')[0];
   // Strip parentheticals
   s = s.replace(/\([^)]*\)/g, '');
-  // Collapse whitespace; preserve unicode letters, apostrophes, hyphens, ampersands
-  s = s.replace(/[^a-zñáéíóúàâäãåæèêëìîïòôöõøœùûüýÿç\s\-'&]/g, ' ').replace(/\s+/g, ' ').trim();
+  // Collapse whitespace and stray punctuation
+  s = s.replace(/[^a-z\s]/g, ' ').replace(/\s+/g, ' ').trim();
   return s;
 }
 
@@ -3946,7 +3946,12 @@ function renderModalCats(dayIndex) {
     ['mediterranean','Mediterranean'],['taco','Mexican'],
     ['other','Other'],['pasta','Pasta'],['slowcooker','Slow Cooker'],['steak','Steak']
   ];
-  const cats = weekdayCats;
+  const fridayCats = [
+    ['all','All'],['friday_special','Shabbat/Friday'],['burger','Burgers'],
+    ['easy','Easy Night'],['mediterranean','Mediterranean'],['taco','Mexican'],
+    ['other','Other'],['pasta','Pasta'],['slowcooker','Slow Cooker'],['steak','Steak']
+  ];
+  const cats = dayIndex === 4 ? fridayCats : weekdayCats;
 
   const el = document.getElementById('modalCats');
   el.innerHTML = '';
@@ -4681,15 +4686,6 @@ function openRecipeModal(recipeName, fromDayIndex = null) {
   document.getElementById('recipeModalTitle').textContent = recipe.name;
   document.getElementById('recipeModalTags').innerHTML =
     (recipe.tags || []).map(t => `<span class="tag tag-${t}">${t}</span>`).join('');
-  
-  // Image banner
-  const banner = document.getElementById('recipeModalImageBanner');
-  if (recipe.image) {
-    banner.style.backgroundImage = `url('${recipe.image}')`;
-    banner.style.display = 'block';
-  } else {
-    banner.style.display = 'none';
-  }
 
   // Protein picker
   const proteinBar = document.getElementById('recipeModalProteinBar');
@@ -6958,7 +6954,6 @@ function editSavedRecipe() {
     ingredients: recipe.ingredients || [],
     steps: recipe.steps || [],
     url: recipe.url || '',
-    image: recipe.image || '',
     cuisine: Array.isArray(recipe.cuisine) ? recipe.cuisine.slice() : [],
     type: Array.isArray(recipe.type) ? recipe.type.slice() : [],
     proteins: Array.isArray(recipe.proteins) ? recipe.proteins.slice() : [],
@@ -7186,16 +7181,18 @@ function openDiscoverEditModal(r) {
         <textarea id="deIngredients" style="width:100%;box-sizing:border-box;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'DM Mono',monospace;font-size:11px;padding:10px;min-height:160px;resize:vertical;outline:none;margin-bottom:10px"></textarea>
         <label class="input-label">Steps <span style="opacity:0.5;font-size:9px">(one per line)</span></label>
         <textarea id="deSteps" style="width:100%;box-sizing:border-box;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:12px;padding:10px;min-height:120px;resize:vertical;outline:none;margin-bottom:10px"></textarea>
+        <label class="input-label">Import from screenshot <span style="opacity:0.5;font-size:9px">(reads a recipe photo and fills the fields)</span></label>
+        <div style="margin-bottom:16px">
+          <input type="file" id="deScreenshotInput" accept="image/*" style="display:none" onchange="importRecipeFromScreenshot(event)" />
+          <button class="confirm-btn" id="deScreenshotBtn" onclick="document.getElementById('deScreenshotInput').click()" style="width:100%;padding:9px;white-space:nowrap">📷 Import from screenshot</button>
+        </div>
         <label class="input-label">Source URL</label>
         <div style="display:flex;gap:8px;margin-bottom:16px">
           <input id="deUrl" class="text-input" type="text" placeholder="https://..." style="margin-bottom:0;flex:1" oninput="onDeUrlChange()" />
           <button class="confirm-btn" id="deImportBtn" onclick="importRecipeFromUrl()" style="flex:0 0 auto;padding:8px 14px;white-space:nowrap;display:none">Import from URL</button>
         </div>
-        <label class="input-label">Image <span style="opacity:0.5;font-size:9px">(auto-filled from URL, or paste/upload your own)</span></label>
-        <div style="display:flex;gap:8px;margin-bottom:8px">
-          <input id="deImage" class="text-input" type="text" placeholder="https://...image.jpg" style="margin-bottom:0;flex:1" oninput="updateDeImagePreview()" />
-          <button class="confirm-btn" onclick="uploadRecipeImage()" style="flex:0 0 auto;padding:8px 12px;white-space:nowrap;font-size:12px">📤 Upload</button>
-        </div>
+        <label class="input-label">Image <span style="opacity:0.5;font-size:9px">(auto-filled from URL, or paste your own)</span></label>
+        <input id="deImage" class="text-input" type="text" placeholder="https://...image.jpg" style="margin-bottom:8px" oninput="updateDeImagePreview()" />
         <div id="deImagePreview" style="display:none;margin-bottom:16px">
           <img id="deImagePreviewImg" style="width:100%;max-height:160px;object-fit:cover;border-radius:10px" alt="preview" />
         </div>
@@ -7245,7 +7242,6 @@ function closeDiscoverEditModal() {
 }
 
 let deOriginalUrl = '';
-let deUrlScrapeTimeout;
 
 function updateDeImagePreview() {
   const url = document.getElementById('deImage').value.trim();
@@ -7260,188 +7256,69 @@ function updateDeImagePreview() {
   }
 }
 
-async function scrapeImageFromUrl() {
-  const url = document.getElementById('deUrl').value.trim();
-  if (!url || !/^https?:\/\//.test(url)) return; // Silent fail if no valid URL
-  
-  // Don't scrape if image already set manually
-  if (document.getElementById('deImage').value.trim()) return;
-  
-  try {
-    const resp = await fetch(SUPABASE_URL + '/functions/v1/import-recipe', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + AUTH_TOKEN },
-      body: JSON.stringify({ url })
-    });
-    const data = await resp.json();
-    
-    if (data.image) {
-      document.getElementById('deImage').value = data.image;
-      updateDeImagePreview();
-    }
-  } catch(e) {
-    // Silent fail — user can paste image URL manually if scrape fails
-  }
-}
-
-function uploadRecipeImage() {
-  const input = document.createElement('input');
-  input.type = 'file';
-  input.accept = 'image/*';
-  input.onchange = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    
-    // Create a simple data URL (client-side, no server upload needed)
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      const dataUrl = evt.target.result;
-      document.getElementById('deImage').value = dataUrl;
-      updateDeImagePreview();
-      showToast('Image ready to save');
-    };
-    reader.readAsDataURL(file);
-  };
-  input.click();
-}
-
-async function searchWikimediaImage(recipeName) {
-  try {
-    // Search with "recipe" context for better results (or try without if needed)
-    const searchTerm = encodeURIComponent(recipeName + ' recipe');
-    const url = `https://commons.wikimedia.org/w/api.php?action=query&list=search&srsearch=${searchTerm}&srnamespace=6&srlimit=5&format=json&origin=*`;
-    
-    const resp = await fetch(url);
-    const data = await resp.json();
-    
-    if (data.query && data.query.search && data.query.search.length > 0) {
-      const filename = data.query.search[0].title.replace('File:', '');
-      const imageUrl = `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(filename)}?width=800`;
-      return imageUrl;
-    }
-    return null;
-  } catch(e) {
-    return null;
-  }
-}
-
-async function batchScrapeRecipeImages() {
-  await ensureFreshToken();
-  
-  // Get all recipes (built-in + custom)
-  const allRecipes = getAllRecipes();
-  const recipesWithUrls = allRecipes.filter(r => r.url && r.url.trim());
-  const recipesWithoutUrls = allRecipes.filter(r => !r.url || !r.url.trim());
-  
-  if (recipesWithUrls.length === 0 && recipesWithoutUrls.length === 0) {
-    showToast('No recipes found');
-    return;
-  }
-  
-  showToast(`Scraping images for ${recipesWithUrls.length} (URLs) + ${recipesWithoutUrls.length} (Commons search)...`);
-  let successCount = 0;
-  let failCount = 0;
-  
-  // Scrape from URLs (only if recipe doesn't already have an image)
-  for (const recipe of recipesWithUrls) {
-    if (recipe.image) {
-      successCount++; // Already has image, skip
-      continue;
-    }
-    try {
-      const resp = await fetch(SUPABASE_URL + '/functions/v1/import-recipe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + AUTH_TOKEN },
-        body: JSON.stringify({ url: recipe.url })
-      });
-      const data = await resp.json();
-      
-      if (data.image) {
-        recipe.image = data.image;
-        
-        // Only PATCH recipes that exist in Supabase (have sbId)
-        if (recipe.sbId) {
-          const patchResp = await fetch(SUPABASE_URL + '/rest/v1/recipes?id=eq.' + recipe.sbId + '&family_id=eq.' + FAMILY_ID, {
-            method: 'PATCH',
-            headers: {
-              'Content-Type': 'application/json',
-              'apikey': SUPABASE_KEY,
-              'Authorization': 'Bearer ' + AUTH_TOKEN,
-              'Prefer': 'return=minimal'
-            },
-            body: JSON.stringify({ image_url: data.image })
-          });
-          if (!patchResp.ok) console.warn('PATCH failed for', recipe.name, 'id:', recipe.sbId, 'status:', patchResp.status);
-        }
-        successCount++;
-      } else {
-        failCount++;
-      }
-    } catch(e) {
-      console.warn('Scrape error for', recipe.name, ':', e);
-      failCount++;
-    }
-    
-    await new Promise(resolve => setTimeout(resolve, 100));
-  }
-  
-  // Search Wikimedia Commons for recipes without URLs (only if no image exists)
-  for (const recipe of recipesWithoutUrls) {
-    if (recipe.image) {
-      successCount++; // Already has image, skip
-      continue;
-    }
-    try {
-      const imageUrl = await searchWikimediaImage(recipe.name);
-      
-      if (imageUrl) {
-        recipe.image = imageUrl;
-        
-        // Only PATCH recipes that exist in Supabase (have sbId)
-        if (recipe.sbId) {
-          const patchResp = await fetch(SUPABASE_URL + '/rest/v1/recipes?id=eq.' + recipe.sbId + '&family_id=eq.' + FAMILY_ID, {
-            method: 'PATCH',
-            headers: {
-              'Content-Type': 'application/json',
-              'apikey': SUPABASE_KEY,
-              'Authorization': 'Bearer ' + AUTH_TOKEN,
-              'Prefer': 'return=minimal'
-            },
-            body: JSON.stringify({ image_url: imageUrl })
-          });
-          if (!patchResp.ok) console.warn('PATCH failed for', recipe.name, ':', patchResp.status);
-        }
-        successCount++;
-      } else {
-        failCount++;
-      }
-    } catch(e) {
-      console.warn('Commons search error for', recipe.name, ':', e);
-      failCount++;
-    }
-    
-    await new Promise(resolve => setTimeout(resolve, 150));
-  }
-  
-  showToast(`Done! ${successCount} images scraped, ${failCount} failed or skipped`);
-  renderWeek();
-}
-
 function onDeUrlChange() {
   const current = document.getElementById('deUrl').value.trim();
   const btn = document.getElementById('deImportBtn');
   if (btn) btn.style.display = (current && current !== deOriginalUrl) ? 'block' : 'none';
-  
-  // Clear image field when URL changes so auto-scrape gets fresh image
-  if (current && current !== deOriginalUrl) {
-    document.getElementById('deImage').value = '';
-    document.getElementById('deImagePreview').style.display = 'none';
-  }
-  
-  // Auto-scrape image with debounce (wait 1.5s after user stops typing)
-  clearTimeout(deUrlScrapeTimeout);
-  if (current && /^https?:\/\//.test(current)) {
-    deUrlScrapeTimeout = setTimeout(() => scrapeImageFromUrl(), 1500);
+}
+
+async function importRecipeFromScreenshot(event) {
+  const file = event.target && event.target.files && event.target.files[0];
+  if (!file) return;
+  await ensureFreshToken();
+
+  const btn = document.getElementById('deScreenshotBtn');
+  const origText = btn.textContent;
+  btn.textContent = 'Reading recipe...';
+  btn.disabled = true;
+
+  try {
+    // Read the file as base64 (strip the data: prefix)
+    const dataUrl = await new Promise(function(resolve, reject) {
+      const reader = new FileReader();
+      reader.onload = function() { resolve(reader.result); };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+    const base64 = String(dataUrl).split(',')[1];
+    const mediaType = file.type || 'image/jpeg';
+
+    const resp = await fetch(SUPABASE_URL + '/functions/v1/import-recipe-image', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + AUTH_TOKEN },
+      body: JSON.stringify({ imageBase64: base64, mediaType: mediaType })
+    });
+    const data = await resp.json();
+
+    if (data.error) {
+      showToast(data.error);
+      return;
+    }
+
+    // Populate fields (don't overwrite a name the user already typed)
+    if (data.name && !document.getElementById('deRecipeName').value.trim()) {
+      document.getElementById('deRecipeName').value = data.name;
+    }
+    if (data.ingredients && data.ingredients.length) {
+      const existing = document.getElementById('deIngredients').value.trim();
+      const lines = data.ingredients.map(function(i) { return i + ', tj'; }).join('\n');
+      document.getElementById('deIngredients').value = existing ? (existing + '\n' + lines) : lines;
+    }
+    if (data.steps && data.steps.length) {
+      const existingSteps = document.getElementById('deSteps').value.trim();
+      const stepText = data.steps.join('\n');
+      document.getElementById('deSteps').value = existingSteps ? (existingSteps + '\n' + stepText) : stepText;
+    }
+
+    const n = (data.ingredients ? data.ingredients.length : 0);
+    showToast(n ? ('Read ' + n + ' ingredients — review and save') : 'Read recipe — review the fields');
+  } catch(e) {
+    console.error('Screenshot import error:', e);
+    showToast('Could not read a recipe from that image');
+  } finally {
+    btn.textContent = origText;
+    btn.disabled = false;
+    event.target.value = ''; // reset so the same file can be re-picked
   }
 }
 
