@@ -2945,10 +2945,8 @@ function pickRandom(arr) {
 }
 
 function pickFriday() {
-  // Bias toward chicken soup 50% of the time
-  const r = Math.random();
-  if (r < 0.5) return RECIPES.friday_special.find(r => r.name.includes("Chicken Soup"));
-  return pickRandom(RECIPES.friday_special);
+  // Pick from all recipes, no special restriction
+  return pickRandom(getAllRecipes());
 }
 
 function generateWeekPlan() {
@@ -3939,12 +3937,7 @@ function renderModalCats(dayIndex) {
     ['mediterranean','Mediterranean'],['taco','Mexican'],
     ['other','Other'],['pasta','Pasta'],['slowcooker','Slow Cooker'],['steak','Steak']
   ];
-  const fridayCats = [
-    ['all','All'],['friday_special','Shabbat/Friday'],['burger','Burgers'],
-    ['easy','Easy Night'],['mediterranean','Mediterranean'],['taco','Mexican'],
-    ['other','Other'],['pasta','Pasta'],['slowcooker','Slow Cooker'],['steak','Steak']
-  ];
-  const cats = dayIndex === 4 ? fridayCats : weekdayCats;
+  const cats = weekdayCats;
 
   const el = document.getElementById('modalCats');
   el.innerHTML = '';
