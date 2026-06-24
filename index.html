@@ -7362,8 +7362,9 @@ async function batchScrapeRecipeImages() {
       if (data.image) {
         recipe.image = data.image;
         
-        if (recipe.id) {
-          const patchResp = await fetch(SUPABASE_URL + '/rest/v1/recipes?id=eq.' + recipe.id + '&family_id=eq.' + FAMILY_ID, {
+        const recipeId = recipe.sbId || recipe.id;
+        if (recipeId) {
+          const patchResp = await fetch(SUPABASE_URL + '/rest/v1/recipes?id=eq.' + recipeId + '&family_id=eq.' + FAMILY_ID, {
             method: 'PATCH',
             headers: {
               'Content-Type': 'application/json',
@@ -7372,7 +7373,7 @@ async function batchScrapeRecipeImages() {
             },
             body: JSON.stringify({ image_url: data.image })
           });
-          if (!patchResp.ok) console.warn('PATCH failed for', recipe.name, ':', patchResp.status);
+          if (!patchResp.ok) console.warn('PATCH failed for', recipe.name, 'id:', recipeId, 'status:', patchResp.status);
         }
         successCount++;
       } else {
@@ -7394,8 +7395,9 @@ async function batchScrapeRecipeImages() {
       if (imageUrl) {
         recipe.image = imageUrl;
         
-        if (recipe.id) {
-          const patchResp = await fetch(SUPABASE_URL + '/rest/v1/recipes?id=eq.' + recipe.id + '&family_id=eq.' + FAMILY_ID, {
+        const recipeId = recipe.sbId || recipe.id;
+        if (recipeId) {
+          const patchResp = await fetch(SUPABASE_URL + '/rest/v1/recipes?id=eq.' + recipeId + '&family_id=eq.' + FAMILY_ID, {
             method: 'PATCH',
             headers: {
               'Content-Type': 'application/json',
