@@ -7313,7 +7313,8 @@ function uploadRecipeImage() {
 
 async function searchWikimediaImage(recipeName) {
   try {
-    const searchTerm = encodeURIComponent(recipeName.replace(/\s+/g, ' '));
+    // Search with "food" context for better recipe image results
+    const searchTerm = encodeURIComponent(recipeName + ' food');
     const url = `https://commons.wikimedia.org/w/api.php?action=query&list=search&srsearch=${searchTerm}&srnamespace=6&srlimit=5&format=json&origin=*`;
     
     const resp = await fetch(url);
