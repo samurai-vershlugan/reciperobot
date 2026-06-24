@@ -2111,6 +2111,61 @@
     cursor: pointer;
     border-radius: 12px 12px 0 0;
   }
+
+  .import-section {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 18px;
+  }
+  .import-section-header { margin-bottom: 12px; }
+  .import-section-title {
+    font-family: var(--font-display, serif);
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+    display: block;
+  }
+  .import-section-sub {
+    font-family: var(--font-body, sans-serif);
+    font-size: 11px;
+    color: var(--text-muted);
+    display: block;
+    margin-top: 2px;
+  }
+  .import-method-btn {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 11px 13px;
+    cursor: pointer;
+    text-align: left;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .import-method-btn:hover { border-color: var(--accent2); box-shadow: 0 2px 8px rgba(44,26,14,0.06); }
+  .import-method-btn:disabled { opacity: 0.6; cursor: default; }
+  .import-method-icon { font-size: 22px; line-height: 1; flex: 0 0 auto; }
+  .import-method-text { display: flex; flex-direction: column; line-height: 1.3; }
+  .import-method-text b { font-size: 13px; color: var(--text); font-weight: 600; }
+  .import-method-text small { font-size: 11px; color: var(--text-muted); }
+  .import-or {
+    display: flex; align-items: center; text-align: center;
+    margin: 10px 2px; gap: 8px;
+  }
+  .import-or::before, .import-or::after {
+    content: ''; flex: 1; height: 1px; background: var(--border);
+  }
+  .import-or span {
+    font-family: var(--font-mono, monospace);
+    font-size: 9px; letter-spacing: 1px; text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .import-url-row { display: flex; gap: 8px; }
 </style>
 
 <!-- ─── LOGIN SCREEN ─────────────────────────────────────────────────────── -->
@@ -5891,6 +5946,61 @@ function printSnapshot() {
     cursor: pointer;
     border-radius: 12px 12px 0 0;
   }
+
+  .import-section {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 18px;
+  }
+  .import-section-header { margin-bottom: 12px; }
+  .import-section-title {
+    font-family: var(--font-display, serif);
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+    display: block;
+  }
+  .import-section-sub {
+    font-family: var(--font-body, sans-serif);
+    font-size: 11px;
+    color: var(--text-muted);
+    display: block;
+    margin-top: 2px;
+  }
+  .import-method-btn {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 11px 13px;
+    cursor: pointer;
+    text-align: left;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .import-method-btn:hover { border-color: var(--accent2); box-shadow: 0 2px 8px rgba(44,26,14,0.06); }
+  .import-method-btn:disabled { opacity: 0.6; cursor: default; }
+  .import-method-icon { font-size: 22px; line-height: 1; flex: 0 0 auto; }
+  .import-method-text { display: flex; flex-direction: column; line-height: 1.3; }
+  .import-method-text b { font-size: 13px; color: var(--text); font-weight: 600; }
+  .import-method-text small { font-size: 11px; color: var(--text-muted); }
+  .import-or {
+    display: flex; align-items: center; text-align: center;
+    margin: 10px 2px; gap: 8px;
+  }
+  .import-or::before, .import-or::after {
+    content: ''; flex: 1; height: 1px; background: var(--border);
+  }
+  .import-or span {
+    font-family: var(--font-mono, monospace);
+    font-size: 9px; letter-spacing: 1px; text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .import-url-row { display: flex; gap: 8px; }
 </style></head>
     <body>${content}</body></html>`);
   win.document.close();
@@ -7181,15 +7291,21 @@ function openDiscoverEditModal(r) {
         <textarea id="deIngredients" style="width:100%;box-sizing:border-box;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'DM Mono',monospace;font-size:11px;padding:10px;min-height:160px;resize:vertical;outline:none;margin-bottom:10px"></textarea>
         <label class="input-label">Steps <span style="opacity:0.5;font-size:9px">(one per line)</span></label>
         <textarea id="deSteps" style="width:100%;box-sizing:border-box;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:12px;padding:10px;min-height:120px;resize:vertical;outline:none;margin-bottom:10px"></textarea>
-        <label class="input-label">Import from screenshot <span style="opacity:0.5;font-size:9px">(reads a recipe photo and fills the fields)</span></label>
-        <div style="margin-bottom:16px">
+        <div class="import-section">
+          <div class="import-section-header">
+            <span class="import-section-title">✨ Quick Import</span>
+            <span class="import-section-sub">Fill the recipe automatically from a photo or a link</span>
+          </div>
           <input type="file" id="deScreenshotInput" accept="image/*" style="display:none" onchange="importRecipeFromScreenshot(event)" />
-          <button class="confirm-btn" id="deScreenshotBtn" onclick="document.getElementById('deScreenshotInput').click()" style="width:100%;padding:9px;white-space:nowrap">📷 Import from screenshot</button>
-        </div>
-        <label class="input-label">Source URL</label>
-        <div style="display:flex;gap:8px;margin-bottom:16px">
-          <input id="deUrl" class="text-input" type="text" placeholder="https://..." style="margin-bottom:0;flex:1" oninput="onDeUrlChange()" />
-          <button class="confirm-btn" id="deImportBtn" onclick="importRecipeFromUrl()" style="flex:0 0 auto;padding:8px 14px;white-space:nowrap;display:none">Import from URL</button>
+          <button class="import-method-btn" id="deScreenshotBtn" onclick="document.getElementById('deScreenshotInput').click()">
+            <span class="import-method-icon">📷</span>
+            <span class="import-method-text"><b>From screenshot</b><small>Read a recipe photo or social post</small></span>
+          </button>
+          <div class="import-or"><span>or</span></div>
+          <div class="import-url-row">
+            <input id="deUrl" class="text-input" type="text" placeholder="Paste a recipe URL (https://...)" style="margin-bottom:0;flex:1" oninput="onDeUrlChange()" />
+            <button class="confirm-btn" id="deImportBtn" onclick="importRecipeFromUrl()" style="flex:0 0 auto;padding:8px 14px;white-space:nowrap;display:none">Import</button>
+          </div>
         </div>
         <label class="input-label">Image <span style="opacity:0.5;font-size:9px">(auto-filled from URL, or paste your own)</span></label>
         <input id="deImage" class="text-input" type="text" placeholder="https://...image.jpg" style="margin-bottom:8px" oninput="updateDeImagePreview()" />
