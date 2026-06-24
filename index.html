@@ -7313,17 +7313,15 @@ function uploadRecipeImage() {
 
 async function searchWikimediaImage(recipeName) {
   try {
-    // Search with "food" context for better recipe image results
-    const searchTerm = encodeURIComponent(recipeName + ' food');
+    // Search with "recipe" context for better results (or try without if needed)
+    const searchTerm = encodeURIComponent(recipeName + ' recipe');
     const url = `https://commons.wikimedia.org/w/api.php?action=query&list=search&srsearch=${searchTerm}&srnamespace=6&srlimit=5&format=json&origin=*`;
     
     const resp = await fetch(url);
     const data = await resp.json();
     
     if (data.query && data.query.search && data.query.search.length > 0) {
-      // Get the first result's filename
       const filename = data.query.search[0].title.replace('File:', '');
-      // Construct the image URL
       const imageUrl = `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(filename)}?width=800`;
       return imageUrl;
     }
@@ -7350,8 +7348,12 @@ async function batchScrapeRecipeImages() {
   let successCount = 0;
   let failCount = 0;
   
-  // Scrape from URLs
+  // Scrape from URLs (only if recipe doesn't already have an image)
   for (const recipe of recipesWithUrls) {
+    if (recipe.image) {
+      successCount++; // Already has image, skip
+      continue;
+    }
     try {
       const resp = await fetch(SUPABASE_URL + '/functions/v1/import-recipe', {
         method: 'POST',
@@ -7389,8 +7391,12 @@ async function batchScrapeRecipeImages() {
     await new Promise(resolve => setTimeout(resolve, 100));
   }
   
-  // Search Wikimedia Commons for recipes without URLs
+  // Search Wikimedia Commons for recipes without URLs (only if no image exists)
   for (const recipe of recipesWithoutUrls) {
+    if (recipe.image) {
+      successCount++; // Already has image, skip
+      continue;
+    }
     try {
       const imageUrl = await searchWikimediaImage(recipe.name);
       
