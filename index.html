@@ -3588,8 +3588,8 @@ function normalizeIngredient(name) {
   s = s.split(',')[0];
   // Strip parentheticals
   s = s.replace(/\([^)]*\)/g, '');
-  // Collapse whitespace and stray punctuation
-  s = s.replace(/[^a-z\s]/g, ' ').replace(/\s+/g, ' ').trim();
+  // Collapse whitespace; preserve unicode letters, apostrophes, hyphens, ampersands
+  s = s.replace(/[^a-zñáéíóúàâäãåæèêëìîïòôöõøœùûüýÿç\s\-'&]/g, ' ').replace(/\s+/g, ' ').trim();
   return s;
 }
 
