@@ -7362,7 +7362,7 @@ async function batchScrapeRecipeImages() {
         recipe.image = data.image;
         
         if (recipe.id) {
-          await fetch(SUPABASE_URL + '/rest/v1/recipes?id=eq.' + recipe.id, {
+          const patchResp = await fetch(SUPABASE_URL + '/rest/v1/recipes?id=eq.' + recipe.id + '&family_id=eq.' + FAMILY_ID, {
             method: 'PATCH',
             headers: {
               'Content-Type': 'application/json',
@@ -7371,12 +7371,14 @@ async function batchScrapeRecipeImages() {
             },
             body: JSON.stringify({ image_url: data.image })
           });
+          if (!patchResp.ok) console.warn('PATCH failed for', recipe.name, ':', patchResp.status);
         }
         successCount++;
       } else {
         failCount++;
       }
     } catch(e) {
+      console.warn('Scrape error for', recipe.name, ':', e);
       failCount++;
     }
     
@@ -7392,7 +7394,7 @@ async function batchScrapeRecipeImages() {
         recipe.image = imageUrl;
         
         if (recipe.id) {
-          await fetch(SUPABASE_URL + '/rest/v1/recipes?id=eq.' + recipe.id, {
+          const patchResp = await fetch(SUPABASE_URL + '/rest/v1/recipes?id=eq.' + recipe.id + '&family_id=eq.' + FAMILY_ID, {
             method: 'PATCH',
             headers: {
               'Content-Type': 'application/json',
@@ -7401,12 +7403,14 @@ async function batchScrapeRecipeImages() {
             },
             body: JSON.stringify({ image_url: imageUrl })
           });
+          if (!patchResp.ok) console.warn('PATCH failed for', recipe.name, ':', patchResp.status);
         }
         successCount++;
       } else {
         failCount++;
       }
     } catch(e) {
+      console.warn('Commons search error for', recipe.name, ':', e);
       failCount++;
     }
     
