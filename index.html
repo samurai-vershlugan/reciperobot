@@ -7369,6 +7369,7 @@ async function batchScrapeRecipeImages() {
             method: 'PATCH',
             headers: {
               'Content-Type': 'application/json',
+              'apikey': SUPABASE_KEY,
               'Authorization': 'Bearer ' + AUTH_TOKEN,
               'Prefer': 'return=minimal'
             },
@@ -7402,6 +7403,7 @@ async function batchScrapeRecipeImages() {
             method: 'PATCH',
             headers: {
               'Content-Type': 'application/json',
+              'apikey': SUPABASE_KEY,
               'Authorization': 'Bearer ' + AUTH_TOKEN,
               'Prefer': 'return=minimal'
             },
