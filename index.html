@@ -7300,6 +7300,63 @@ function uploadRecipeImage() {
   input.click();
 }
 
+async function batchScrapeRecipeImages() {
+  await ensureFreshToken();
+  
+  // Get all recipes (built-in + custom)
+  const allRecipes = getAllRecipes();
+  const recipesWithUrls = allRecipes.filter(r => r.url && r.url.trim());
+  
+  if (recipesWithUrls.length === 0) {
+    showToast('No recipes with URLs found');
+    return;
+  }
+  
+  showToast(`Scraping images for ${recipesWithUrls.length} recipes...`);
+  let successCount = 0;
+  let failCount = 0;
+  
+  for (const recipe of recipesWithUrls) {
+    try {
+      const resp = await fetch(SUPABASE_URL + '/functions/v1/import-recipe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + AUTH_TOKEN },
+        body: JSON.stringify({ url: recipe.url })
+      });
+      const data = await resp.json();
+      
+      if (data.image) {
+        // Update the recipe with the scraped image
+        recipe.image = data.image;
+        
+        // If it's a custom recipe, save to Supabase
+        if (recipe.id) {
+          await fetch(SUPABASE_URL + '/rest/v1/recipes?id=eq.' + recipe.id, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer ' + AUTH_TOKEN,
+              'Prefer': 'return=minimal'
+            },
+            body: JSON.stringify({ image_url: data.image })
+          });
+        }
+        successCount++;
+      } else {
+        failCount++;
+      }
+    } catch(e) {
+      failCount++;
+    }
+    
+    // Small delay between requests to avoid hammering the Edge Function
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+  
+  showToast(`Done! ${successCount} images scraped, ${failCount} failed`);
+  renderWeek(); // Refresh to show new images on cards
+}
+
 function onDeUrlChange() {
   const current = document.getElementById('deUrl').value.trim();
   const btn = document.getElementById('deImportBtn');
