@@ -2431,7 +2431,7 @@
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px">
         <h3 style="margin:0">🛒 Grocery List</h3>
         <div style="display:flex;gap:6px;align-items:center">
-          <button class="login-back" onclick="clearCheckedGroceryItems()" title="Remove all crossed-off items" style="font-size:10px">✓ Clear done</button>
+          <button class="login-back" onclick="clearCheckedGroceryItems()" title="Remove all crossed-off items" style="font-size:10px">✓ Clear crossed off</button>
           <button class="login-back" onclick="regenerateGroceryList()" title="Rebuild from planned recipes" style="font-size:10px">↻ Regenerate</button>
         </div>
       </div>
@@ -2492,7 +2492,10 @@
       <div id="recipeModalImage" class="recipe-modal-image" style="display:none"></div>
       <div id="recipeModalTitle" class="recipe-modal-name"></div>
       <div id="recipeModalTags" class="recipe-modal-tags"></div>
-      <button class="recipe-edit-btn" id="recipeModalEditBtn" onclick="editSavedRecipe()">✎ Edit recipe</button>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="recipe-edit-btn" id="recipeModalEditBtn" onclick="editSavedRecipe()">✎ Edit recipe</button>
+        <button class="recipe-edit-btn" id="recipeModalDeleteBtn" onclick="deleteCurrentRecipe()" style="display:none;border-color:#c0392b;color:#c0392b">🗑 Delete</button>
+      </div>
     </div>
     <div id="recipeModalProteinBar" style="display:none" class="recipe-modal-protein-bar">
       <span class="recipe-modal-add-label">Protein:</span>
@@ -3675,7 +3678,7 @@ function renderGroceryList() {
 
     const header = document.createElement('button');
     header.className = 'grocery-done-header';
-    header.innerHTML = `<span class="done-caret">${groceryDoneExpanded ? '▾' : '▸'}</span> Done <span class="done-count">${doneItems.length}</span>`;
+    header.innerHTML = `<span class="done-caret">${groceryDoneExpanded ? '▾' : '▸'}</span> Crossed Off <span class="done-count">${doneItems.length}</span>`;
     header.onclick = () => { groceryDoneExpanded = !groceryDoneExpanded; renderGroceryList(); };
     doneWrap.appendChild(header);
 
@@ -5085,6 +5088,8 @@ function openRecipeModal(recipeName, fromDayIndex = null) {
   }
   // Title + tags
   document.getElementById('recipeModalTitle').textContent = recipe.name;
+  var _mDel = document.getElementById('recipeModalDeleteBtn');
+  if (_mDel) _mDel.style.display = recipe.custom ? 'inline-block' : 'none';
   document.getElementById('recipeModalTags').innerHTML =
     (recipe.tags || []).map(t => `<span class="tag tag-${t}">${t}</span>`).join('');
 
@@ -7583,6 +7588,17 @@ let pendingDiscoverRecipe = null;
 
 let currentOpenRecipeName = null;
 
+async function deleteCurrentRecipe() {
+  const name = currentOpenRecipeName;
+  if (!name) return;
+  const recipe = getAllRecipes().find(r => r.name === name);
+  if (!recipe || !recipe.custom) return;
+  if (!confirm('Delete "' + name + '" from your library? This cannot be undone.')) return;
+  const cat = (recipe.tags || []).find(t => t !== 'custom') || 'other';
+  await deleteRecipeFromLibrary(name, cat);
+  document.getElementById('recipeModal').classList.remove('open');
+}
+
 function editSavedRecipe() {
   const recipe = getAllRecipes().find(r => r.name === currentOpenRecipeName);
   if (!recipe) { showToast('Recipe not found'); return; }
@@ -7599,6 +7615,7 @@ function editSavedRecipe() {
     type: Array.isArray(recipe.type) ? recipe.type.slice() : [],
     proteins: Array.isArray(recipe.proteins) ? recipe.proteins.slice() : [],
     tags: Array.isArray(recipe.tags) ? recipe.tags.slice() : [],
+    image: recipe.image || null,
     _editingExisting: recipe.name,
     _isCustom: !!recipe.custom
   };
