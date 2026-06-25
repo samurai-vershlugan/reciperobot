@@ -4719,12 +4719,40 @@ function recipeCuisines(r) {
 }
 
 // Map a recipe to its type/format using category + ingredients + name
+// Roll granular protein labels up into parent filter categories
+const PROTEIN_PARENT = {
+  'ny strip': 'Beef', 'ribeye': 'Beef', 'tri-tip': 'Beef', 'tri tip': 'Beef',
+  'flank': 'Beef', 'skirt': 'Beef', 'sirloin': 'Beef', 'brisket': 'Beef',
+  'chuck': 'Beef', 'steak': 'Beef', 'meat sauce': 'Beef', 'ground beef': 'Beef',
+  'beef': 'Beef',
+  'carnitas': 'Pork', 'bacon': 'Pork', 'pork': 'Pork', 'ham': 'Pork', 'sausage': 'Pork',
+  'marinara': 'Vegetarian',
+  'chicken': 'Chicken', 'thigh': 'Chicken', 'breast': 'Chicken',
+  'salmon': 'Salmon',
+  'fish': 'Fish', 'cod': 'Fish', 'tilapia': 'Fish', 'halibut': 'Fish', 'tuna': 'Fish',
+  'shrimp': 'Shrimp', 'prawn': 'Shrimp',
+  'turkey': 'Turkey',
+  'lamb': 'Lamb',
+  'tofu': 'Vegetarian', 'beans': 'Vegetarian', 'chickpea': 'Vegetarian'
+};
+function normalizeProteinLabel(label) {
+  if (!label) return null;
+  const key = label.toLowerCase().trim();
+  if (PROTEIN_PARENT[key]) return PROTEIN_PARENT[key];
+  // Substring fallback (e.g. "NY Strip Steak" -> contains "steak")
+  for (const k in PROTEIN_PARENT) {
+    if (key.includes(k)) return PROTEIN_PARENT[k];
+  }
+  // Unknown/genuinely custom — keep as-is (capitalized)
+  return label.trim();
+}
+
 function recipeTypes(r) {
   const out = new Set();
   // Manual overrides ADD to (not replace) auto-detection
-  if (Array.isArray(r.type)) r.type.forEach(t => out.add(t));
+  if (Array.isArray(r.type)) r.type.forEach(t => { const nt = normalizeProteinLabel(t); if (nt) out.add(nt); });
   // Stored protein picker values (e.g. Salmon, Lamb) — these are custom/explicit
-  if (Array.isArray(r.proteins)) r.proteins.forEach(p => { if (p && p.label) out.add(p.label); });
+  if (Array.isArray(r.proteins)) r.proteins.forEach(p => { if (p && p.label) { const np = normalizeProteinLabel(p.label); if (np) out.add(np); } });
   const tags = (r.tags || []).map(t => t.toLowerCase());
   // Proteins via existing matcher — always runs
   ['Chicken','Beef','Pork','Fish','Shrimp','Turkey'].forEach(p => {
