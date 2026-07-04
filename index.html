@@ -5058,12 +5058,17 @@ async function deleteRecipeFromEditor() {
 
 async function deleteRecipeFromLibrary(name, cat) {
   if (!confirm(`Remove "${name}" from the library?`)) return;
-  if (RECIPES[cat]) RECIPES[cat] = RECIPES[cat].filter(r => r.name !== name);
+  // Remove from ALL categories (name may exist in more than one place)
+  Object.keys(RECIPES).forEach(function(c){
+    RECIPES[c] = RECIPES[c].filter(function(r){ return r.name !== name; });
+  });
   customRecipes = customRecipes.filter(r => r.name !== name);
+  markRecipeDeleted(name);  // prevent hardcoded fallback from resurrecting it
   try {
     await sb.delete('recipes', { family_id: FAMILY_ID, name });
   } catch(e) { console.warn('Recipe delete sync failed'); }
   persistCustomRecipes();
+  renderRecipeFilters();
   renderRotationGrid();
   showToast(`"${name}" removed from library`);
 }
@@ -5960,6 +5965,20 @@ async function saveWeekSnapshot() {
 let customRecipes = [];
 let quickAddDayIndex = null;
 
+let deletedRecipeNames = [];
+try { deletedRecipeNames = JSON.parse(localStorage.getItem('mealos-deleted-recipes') || '[]'); } catch(e) { deletedRecipeNames = []; }
+function isRecipeDeleted(name) { return deletedRecipeNames.indexOf(name) !== -1; }
+function markRecipeDeleted(name) {
+  if (deletedRecipeNames.indexOf(name) === -1) {
+    deletedRecipeNames.push(name);
+    try { localStorage.setItem('mealos-deleted-recipes', JSON.stringify(deletedRecipeNames)); } catch(e) {}
+  }
+}
+function unmarkRecipeDeleted(name) {
+  deletedRecipeNames = deletedRecipeNames.filter(function(n){ return n !== name; });
+  try { localStorage.setItem('mealos-deleted-recipes', JSON.stringify(deletedRecipeNames)); } catch(e) {}
+}
+
 async function loadCustomRecipes() {
   customRecipes = [];
   try {
@@ -5994,6 +6013,10 @@ async function loadCustomRecipes() {
         if (meta.summary) recipeObj.summary = meta.summary;
         RECIPES[cat].push(recipeObj);
         customRecipes.push({ name: row.name, cat, sbId: row.id });
+      });
+      // Remove any hardcoded fallback recipes the user has deliberately deleted
+      Object.keys(RECIPES).forEach(function(c){
+        RECIPES[c] = RECIPES[c].filter(function(rr){ return !isRecipeDeleted(rr.name); });
       });
       renderRecipeFilters();
       renderRotationGrid();
@@ -6136,6 +6159,7 @@ async function confirmAddLibrary() {
   const cat = document.getElementById('libraryCatInput').value;
   if (!name) { showToast('Please enter a meal name'); return; }
 
+  if (typeof unmarkRecipeDeleted === 'function') unmarkRecipeDeleted(name);
   const recipe = { name, tags:[cat, 'custom'], shop:null, ingredients:[], custom:true };
   if (!RECIPES[cat]) RECIPES[cat] = [];
   // Remove any existing copy of this recipe across all categories first (prevent dupes)
@@ -8303,6 +8327,7 @@ async function confirmDiscoverEdit() {
       if (pd && pd.url && (pd.stored || pd.alreadyStored)) imageUrl = pd.url;
     } catch(e) { console.warn('Image persist skipped:', e); }
   }
+  if (typeof unmarkRecipeDeleted === 'function') unmarkRecipeDeleted(name);
   const recipe = {
     name,
     tags: [cat, 'custom'].concat(deTags),
