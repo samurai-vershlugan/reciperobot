@@ -5972,10 +5972,11 @@ async function loadCustomRecipes() {
         Object.keys(RECIPES).forEach(function(c){
           RECIPES[c] = RECIPES[c].filter(function(rr){ return rr.name !== row.name; });
         });
-        RECIPES[cat].push({
+        const meta = row.meta_json || {};
+        const recipeObj = {
           name: row.name,
           tags: row.tags_json || row.tags || [cat,'custom'],
-          shop: null,
+          shop: meta.shop || null,
           ingredients: row.ingredients_json || row.ingredients || [],
           steps: row.steps_json || row.steps || undefined,
           cuisine: row.cuisine_json || undefined,
@@ -5983,9 +5984,15 @@ async function loadCustomRecipes() {
           proteins: row.proteins_json || undefined,
           url: row.url || null,
           image: row.image_url || null,
-          custom: true,
+          custom: true,           // all DB recipes are editable/deletable
           sbId: row.id
-        });
+        };
+        // Restore special fields from meta_json (prep marinades, friday flag, etc.)
+        if (meta.prepIds) recipeObj.prepIds = meta.prepIds;
+        if (meta.friday) recipeObj.friday = meta.friday;
+        if (meta.prepId) recipeObj.id = meta.prepId;
+        if (meta.summary) recipeObj.summary = meta.summary;
+        RECIPES[cat].push(recipeObj);
         customRecipes.push({ name: row.name, cat, sbId: row.id });
       });
       renderRecipeFilters();
