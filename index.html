@@ -2812,26 +2812,6 @@ const RECIPES = {
       ingredients: [{item:"skirt steak",store:"costco"},{item:"flour tortillas",store:"tj"},{item:"lime",store:"tj"},{item:"fresh cilantro",store:"tj"},{item:"onion",store:"tj"},{item:"jalapeño",store:"tj"},{item:"roma tomatoes (2)",store:"tj"},{item:"avocado",store:"costco"}] },
     { name: "Chicken Enchiladas", tags:["taco","kid-friendly"], shop:"costco",
       ingredients: [{item:"chicken thighs",store:"costco"},{item:"flour tortillas",store:"costco"},{item:"enchilada sauce",store:"tj"},{item:"shredded Mexican cheese",store:"costco"},{item:"sour cream",store:"tj"},{item:"fresh cilantro",store:"tj"}] },
-    { name: "Chicken Parm Tacos", tags:["taco","quick","kid-friendly"], shop:"costco",
-      steps: [
-        "Preheat oven to 425°F. Line a large rimmed baking sheet with parchment paper.",
-        "Place 6 tortillas on the pan. Use about ⅓ cup ground chicken per tortilla and flatten thinly and evenly to the edges.",
-        "Sprinkle generously with salt, garlic powder, onion powder, and Italian herb blend. Bake for 10 minutes.",
-        "Remove from oven. Spread each with marinara sauce, then top with mozzarella, pesto, pepperoni, and parmesan.",
-        "Bake again for 10–12 minutes until cheese is melted and bubbly.",
-        "Sprinkle with chili pepper flakes, fold into tacos and serve immediately."
-      ],
-      ingredients: [
-        {item:"6-inch flour tortillas (6)",store:"tj"},
-        {item:"ground chicken (1 lb)",store:"costco"},
-        {item:"marinara sauce",store:"costco"},
-        {item:"shredded mozzarella",store:"costco"},
-        {item:"pesto",store:"tj"},
-        {item:"pepperoni",store:"costco"},
-        {item:"grated parmesan",store:"costco"},
-        {item:"Italian herb blend",store:"tj"},
-        {item:"chili pepper flakes",store:"tj"}
-      ] },
     { name: "Salsa Chicken", tags:["taco","slowcooker","kid-friendly","meal-prep","gluten-free"], shop:"costco",
       ingredients: [{item:"boneless chicken thighs",store:"costco"},{item:"salsa",store:"costco"},{item:"flour tortillas",store:"costco"},{item:"shredded Mexican cheese",store:"costco"},{item:"sour cream",store:"tj"},{item:"lime",store:"tj"},{item:"avocado",store:"costco"}] },
     { name: "Sheet Pan Shrimp Fajitas", tags:["taco","fish","quick","kid-friendly","dairy-free"], shop:"costco",
@@ -2870,8 +2850,6 @@ const RECIPES = {
       ingredients: [{item:"flour tortillas",store:"tj"},{item:"crunchy taco shells",store:"safeway"},{item:"shredded Mexican cheese",store:"costco"},{item:"sour cream",store:"tj"},{item:"roma tomatoes (2)",store:"tj"},{item:"jalapeño",store:"tj"},{item:"onion",store:"tj"},{item:"avocado",store:"costco"},{item:"fresh cilantro",store:"tj"},{item:"lime",store:"tj"}] },
   ],
   pasta: [
-    { name: "Peanut Noodles", tags:["pasta","veg","vegetarian","dairy-free","spicy"], shop:"tj",
-      ingredients: [{item:"asian-style noodles",store:"tj"},{item:"peanut butter",store:"costco"},{item:"soy sauce",store:"tj"},{item:"sesame oil",store:"tj"},{item:"garlic",store:"tj"},{item:"ginger",store:"tj"},{item:"shredded carrots",store:"tj"},{item:"green onions",store:"tj"},{item:"sesame seeds",store:"tj"}] },
     { name: "Pesto Tortellini", tags:["pasta","quick","vegetarian","kid-friendly"], shop:"tj",
       ingredients: [{item:"cheese tortellini",store:"tj"},{item:"pesto",store:"tj"},{item:"cherry tomatoes",store:"costco"},{item:"grated parmesan",store:"costco"},{item:"baby spinach",store:"costco"}] },
     { name: "Spaghetti", tags:["pasta","kid-friendly"], shop:"costco",
@@ -2985,9 +2963,6 @@ const RECIPES = {
     { name: "Whole Foods Pizza Night", tags:["quick","kid-friendly"], shop:"wf",
       friday: true,
       ingredients: [{item:"pizza (WF hot bar or take-and-bake)",store:"wf"},{item:"salad greens",store:"costco"},{item:"sparkling water",store:"tj"}] },
-    { name: "Shawarma Friday", tags:["chicken","shabbat","dairy-free"], shop:"costco",
-      friday: true,
-      ingredients: [{item:"chicken thighs",store:"costco"},{item:"pita bread",store:"tj"},{item:"Greek yogurt",store:"tj"},{item:"cucumber",store:"tj"},{item:"tomatoes",store:"costco"},{item:"challah",store:"tj"},{item:"hummus",store:"costco"}] },
   ],
   easy: [
     { name: "Leftovers Night", tags:["quick","kid-friendly"], shop:null, ingredients: [] },
@@ -5151,7 +5126,7 @@ function openRecipeModal(recipeName, fromDayIndex = null) {
   // Title + tags
   document.getElementById('recipeModalTitle').textContent = recipe.name;
   var _mDel = document.getElementById('recipeModalDeleteBtn');
-  if (_mDel) _mDel.style.display = recipe.custom ? 'inline-block' : 'none';
+  if (_mDel) _mDel.style.display = 'inline-block';
   document.getElementById('recipeModalTags').innerHTML =
     (recipe.tags || []).map(t => `<span class="tag tag-${t}">${t}</span>`).join('');
 
@@ -7722,7 +7697,7 @@ async function deleteCurrentRecipe() {
   const name = currentOpenRecipeName;
   if (!name) return;
   const recipe = getAllRecipes().find(r => r.name === name);
-  if (!recipe || !recipe.custom) return;
+  if (!recipe) return;
   if (!confirm('Delete "' + name + '" from your library? This cannot be undone.')) return;
   const cat = (recipe.tags || []).find(t => t !== 'custom') || 'other';
   await deleteRecipeFromLibrary(name, cat);
@@ -8029,7 +8004,7 @@ function openDiscoverEditModal(r) {
   renderDeClassChips();
   // Show Delete only when editing an existing custom recipe
   var _delBtn = document.getElementById('deDeleteBtn');
-  if (_delBtn) _delBtn.style.display = (r._editingExisting && r._isCustom) ? 'inline-block' : 'none';
+  if (_delBtn) _delBtn.style.display = (r._editingExisting) ? 'inline-block' : 'none';
   renderDeProteins();
   var _imp = document.getElementById('deImportBtn');
   if (_imp) _imp.style.display = 'none';
