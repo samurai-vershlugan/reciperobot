@@ -3874,6 +3874,22 @@ function parseIngredientParts(raw) {
   return { amount: amount, name: displayName };
 }
 
+// Words ending in s/es/us that are NOT plurals — never stem these
+const NO_STEM_WORDS = new Set([
+  'hummus','asparagus','couscous','citrus','swiss','bass','watercress','molasses',
+  'chives','capers','greens','sprouts','grits','oats','berries'
+]);
+// Reduce a word to a singular match-stem (for pantry/grocery matching only — never displayed)
+function stemWord(w) {
+  if (!w || NO_STEM_WORDS.has(w)) return w;
+  if (w.length <= 3) return w;                 // pea(s), fig(s), egg -> leave very short words
+  if (w.endsWith('ss') || w.endsWith('us')) return w;
+  if (w.endsWith('ies') && w.length > 4) return w.slice(0, -3) + 'y'; // berries->berry
+  if (w.endsWith('es') && w.length > 4) return w.slice(0, -2);        // tomatoes->tomato
+  if (w.endsWith('s')) return w.slice(0, -1);                          // peppers->pepper
+  return w;
+}
+
 function normalizeIngredient(name) {
   if (!name) return '';
   let s = name.toLowerCase().trim();
@@ -3897,6 +3913,8 @@ function normalizeIngredient(name) {
   s = s.replace(/\([^)]*\)/g, '');
   // Collapse whitespace and stray punctuation
   s = s.replace(/[^a-z\s]/g, ' ').replace(/\s+/g, ' ').trim();
+  // Stem each word to a singular match-form so plural/singular match (display is unaffected)
+  s = s.split(' ').map(stemWord).join(' ').trim();
   return s;
 }
 
