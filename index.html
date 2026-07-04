@@ -7957,8 +7957,10 @@ function openDiscoverEditModal(r) {
             <button class="confirm-btn" id="deImportBtn" onclick="importRecipeFromUrl()" style="flex:0 0 auto;padding:8px 14px;white-space:nowrap;display:none">Import</button>
           </div>
         </div>
-        <label class="input-label">Image <span style="opacity:0.5;font-size:9px">(auto-filled from URL, or paste your own)</span></label>
-        <input id="deImage" class="text-input" type="text" placeholder="https://...image.jpg" style="margin-bottom:8px" oninput="updateDeImagePreview()" />
+        <label class="input-label">Image <span style="opacity:0.5;font-size:9px">(upload a photo, paste a URL, or auto-filled from recipe URL)</span></label>
+        <input type="file" id="deImageFileInput" accept="image/*" style="display:none" onchange="uploadRecipeImage(event)" />
+        <button type="button" class="confirm-btn" id="deImageUploadBtn" onclick="document.getElementById('deImageFileInput').click()" style="width:100%;padding:9px;margin-bottom:8px;background:var(--surface2);border:1px solid var(--border);color:var(--text)">⬆ Upload a photo</button>
+        <input id="deImage" class="text-input" type="text" placeholder="or paste https://...image.jpg" style="margin-bottom:8px" oninput="updateDeImagePreview()" />
         <div id="deImagePreview" style="display:none;margin-bottom:16px">
           <img id="deImagePreviewImg" style="width:100%;max-height:160px;object-fit:cover;border-radius:10px" alt="preview" />
         </div>
@@ -8014,6 +8016,76 @@ function closeDiscoverEditModal() {
 }
 
 let deOriginalUrl = '';
+
+async function uploadRecipeImage(event) {
+  const file = event.target && event.target.files && event.target.files[0];
+  if (!file) return;
+  await ensureFreshToken();
+
+  const btn = document.getElementById('deImageUploadBtn');
+  const orig = btn.textContent;
+  btn.textContent = 'Uploading...';
+  btn.disabled = true;
+
+  try {
+    // Resize/compress via canvas (max 1000px, JPEG ~0.82) to keep storage small
+    const blob = await resizeImageFile(file, 1000, 0.82);
+    const ext = 'jpg';
+    const fname = 'r-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8) + '.' + ext;
+    const path = FAMILY_ID + '/' + fname;
+
+    const res = await fetch(SUPABASE_URL + '/storage/v1/object/recipe-images/' + path, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': 'Bearer ' + AUTH_TOKEN,
+        'Content-Type': 'image/jpeg',
+        'x-upsert': 'true'
+      },
+      body: blob
+    });
+    if (!res.ok) {
+      const t = await res.text();
+      console.error('Image upload failed:', res.status, t);
+      showToast('Upload failed — check storage bucket setup');
+      return;
+    }
+    const publicUrl = SUPABASE_URL + '/storage/v1/object/public/recipe-images/' + path;
+    document.getElementById('deImage').value = publicUrl;
+    updateDeImagePreview();
+    showToast('Photo uploaded ✓');
+  } catch(e) {
+    console.error('uploadRecipeImage error:', e);
+    showToast('Could not upload that image');
+  } finally {
+    btn.textContent = orig;
+    btn.disabled = false;
+    event.target.value = '';
+  }
+}
+
+// Resize an image File to a max dimension, return a JPEG Blob
+function resizeImageFile(file, maxDim, quality) {
+  return new Promise(function(resolve, reject) {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = function() {
+      URL.revokeObjectURL(url);
+      let w = img.width, h = img.height;
+      if (w > h && w > maxDim) { h = Math.round(h * maxDim / w); w = maxDim; }
+      else if (h >= w && h > maxDim) { w = Math.round(w * maxDim / h); h = maxDim; }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      canvas.toBlob(function(blob) {
+        if (blob) resolve(blob); else reject(new Error('toBlob failed'));
+      }, 'image/jpeg', quality || 0.82);
+    };
+    img.onerror = function() { URL.revokeObjectURL(url); reject(new Error('image load failed')); };
+    img.src = url;
+  });
+}
 
 function updateDeImagePreview() {
   const url = document.getElementById('deImage').value.trim();
