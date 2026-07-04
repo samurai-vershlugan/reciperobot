@@ -4730,7 +4730,11 @@ const TYPE_FILTERS = ['Chicken','Beef','Pork','Fish','Shrimp','Turkey','Vegetari
 // Map a recipe to its cuisine(s) using category + tags + name keywords
 function recipeCuisines(r) {
   const out = new Set();
-  if (Array.isArray(r.cuisine)) r.cuisine.forEach(c => out.add(c));
+  // Explicit cuisine is authoritative — don't fight it with auto-detection
+  if (Array.isArray(r.cuisine) && r.cuisine.length) {
+    r.cuisine.forEach(c => out.add(c));
+    return [...out];
+  }
   const tags = (r.tags || []).map(t => t.toLowerCase());
   const name = r.name.toLowerCase();
   const inCat = (c) => tags.includes(c) || (RECIPES[c] || []).some(x => x.name === r.name);
@@ -4773,16 +4777,20 @@ function normalizeProteinLabel(label) {
 
 function recipeTypes(r) {
   const out = new Set();
-  // Manual overrides ADD to (not replace) auto-detection
-  if (Array.isArray(r.type)) r.type.forEach(t => { const nt = normalizeProteinLabel(t); if (nt) out.add(nt); });
-  // Stored protein picker values (e.g. Salmon, Lamb) — these are custom/explicit
-  if (Array.isArray(r.proteins)) r.proteins.forEach(p => { if (p && p.label) { const np = normalizeProteinLabel(p.label); if (np) out.add(np); } });
   const tags = (r.tags || []).map(t => t.toLowerCase());
-  // Proteins via existing matcher — always runs
+
+  // If the user has EXPLICITLY set a protein type, that is authoritative.
+  // Don't merge in swap-picker proteins or auto-detection (which would fight their choice).
+  if (Array.isArray(r.type) && r.type.length) {
+    r.type.forEach(t => { const nt = normalizeProteinLabel(t); if (nt) out.add(nt); });
+    return [...out];
+  }
+
+  // Otherwise, auto-derive: swap-picker proteins + ingredient detection + veg tag
+  if (Array.isArray(r.proteins)) r.proteins.forEach(p => { if (p && p.label) { const np = normalizeProteinLabel(p.label); if (np) out.add(np); } });
   ['Chicken','Beef','Pork','Fish','Shrimp','Turkey'].forEach(p => {
     if (recipeUsesProtein(r, p)) out.add(p);
   });
-  // Vegetarian: explicit tag
   if (tags.includes('vegetarian') || tags.includes('veg')) out.add('Vegetarian');
   return [...out];
 }
