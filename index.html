@@ -8264,7 +8264,19 @@ async function confirmDiscoverEdit() {
     return { item: item, name: parsed.name, amount: parsed.amount, store: DEFAULT_STORE };
   });
 
-  const imageUrl = document.getElementById('deImage').value.trim();
+  let imageUrl = document.getElementById('deImage').value.trim();
+  // If it's an external URL (not already in our bucket), persist a permanent copy
+  if (imageUrl && imageUrl.startsWith('http') && imageUrl.indexOf('/recipe-images/') === -1) {
+    try {
+      const pr = await fetch(SUPABASE_URL + '/functions/v1/persist-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + AUTH_TOKEN },
+        body: JSON.stringify({ imageUrl: imageUrl, familyId: FAMILY_ID })
+      });
+      const pd = await pr.json();
+      if (pd && pd.url && (pd.stored || pd.alreadyStored)) imageUrl = pd.url;
+    } catch(e) { console.warn('Image persist skipped:', e); }
+  }
   const recipe = {
     name,
     tags: [cat, 'custom'].concat(deTags),
