@@ -8017,6 +8017,28 @@ function closeDiscoverEditModal() {
 
 let deOriginalUrl = '';
 
+async function batchPersistAllImages() {
+  await ensureFreshToken();
+  showToast('Persisting all recipe images — this may take a minute...');
+  try {
+    const res = await fetch(SUPABASE_URL + '/functions/v1/persist-image', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + AUTH_TOKEN },
+      body: JSON.stringify({ batch: true, familyId: FAMILY_ID })
+    });
+    const data = await res.json();
+    console.log('Batch persist result:', data);
+    if (data.error) { showToast('Batch failed: ' + data.error); return data; }
+    showToast('Done: ' + data.converted + ' converted, ' + data.skipped + ' skipped, ' + data.failed + ' failed');
+    // Reload recipes so the new bucket URLs show
+    await loadCustomRecipes();
+    return data;
+  } catch(e) {
+    console.error('Batch persist error:', e);
+    showToast('Batch persist failed — check console');
+  }
+}
+
 async function uploadRecipeImage(event) {
   const file = event.target && event.target.files && event.target.files[0];
   if (!file) return;
