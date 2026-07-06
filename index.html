@@ -2361,6 +2361,39 @@
   }
   .meal-note:hover { border-color: var(--accent2); }
   .action-btn.btn-note { flex: 0 0 auto; }
+
+  .nav-more-wrap { position: relative; display: inline-flex; }
+  .nav-more-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    box-shadow: 0 8px 28px rgba(0,0,0,0.16);
+    padding: 6px;
+    display: none;
+    flex-direction: column;
+    gap: 2px;
+    z-index: 1500;
+    min-width: 170px;
+  }
+  .nav-more-menu.open { display: flex; }
+  .nav-more-menu button {
+    background: none;
+    border: none;
+    text-align: left;
+    padding: 9px 12px;
+    border-radius: 7px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.5px;
+    color: var(--text);
+    cursor: pointer;
+    white-space: nowrap;
+    text-transform: uppercase;
+  }
+  .nav-more-menu button:hover { background: var(--surface2); }
 </style>
 
 <!-- ─── LOGIN SCREEN ─────────────────────────────────────────────────────── -->
@@ -2434,14 +2467,17 @@
       </select>
       <div class="nav-row-top">
         <button class="nav-action generate-btn" onclick="generateWeek()">↻ Generate</button>
-        <button class="nav-action discover-btn" onclick="openDiscoverModal()">✦ Discover</button>
-        <button class="nav-action robot-btn" onclick="openRobotModal()">🤖 Robot</button>
         <button class="nav-action pantry-btn" onclick="openPantryModal()">🥫 Pantry</button>
-      </div>
-      <div class="nav-row-bottom">
-        <button class="nav-action save-btn" onclick="saveWeekSnapshot()" title="Save this week to history">Save Week</button>
-        <button class="nav-action history-btn" onclick="showHistoryPage()">Saved Weeks</button>
-        <button class="nav-action share-btn" onclick="sharePlan()">Share</button>
+        <div class="nav-more-wrap">
+          <button class="nav-action more-btn" onclick="toggleNavMore(event)">⋯ More</button>
+          <div class="nav-more-menu" id="navMoreMenu">
+            <button onclick="openDiscoverModal(); closeNavMore()">✦ Discover</button>
+            <button onclick="openRobotModal(); closeNavMore()">🤖 Robot</button>
+            <button onclick="saveWeekSnapshot(); closeNavMore()">💾 Save Week</button>
+            <button onclick="showHistoryPage(); closeNavMore()">📅 Saved Weeks</button>
+            <button onclick="sharePlan(); closeNavMore()">↗ Share</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -5041,6 +5077,30 @@ function changeWeek(delta) {
   renderWeek();
 }
 
+function toggleNavMore(event) {
+  if (event) event.stopPropagation();
+  const menu = document.getElementById('navMoreMenu');
+  if (!menu) return;
+  const isOpen = menu.classList.contains('open');
+  if (isOpen) { menu.classList.remove('open'); }
+  else {
+    menu.classList.add('open');
+    setTimeout(function(){
+      const handler = function(e){
+        if (!menu.contains(e.target) && !e.target.classList.contains('more-btn')) {
+          menu.classList.remove('open');
+          document.removeEventListener('click', handler);
+        }
+      };
+      document.addEventListener('click', handler);
+    }, 30);
+  }
+}
+function closeNavMore() {
+  const menu = document.getElementById('navMoreMenu');
+  if (menu) menu.classList.remove('open');
+}
+
 function generateWeek() {
   const key = getWeekKey(currentWeekOffset);
   const existing = weekPlans[key] || [];
@@ -6652,6 +6712,39 @@ function printSnapshot() {
   }
   .meal-note:hover { border-color: var(--accent2); }
   .action-btn.btn-note { flex: 0 0 auto; }
+
+  .nav-more-wrap { position: relative; display: inline-flex; }
+  .nav-more-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    box-shadow: 0 8px 28px rgba(0,0,0,0.16);
+    padding: 6px;
+    display: none;
+    flex-direction: column;
+    gap: 2px;
+    z-index: 1500;
+    min-width: 170px;
+  }
+  .nav-more-menu.open { display: flex; }
+  .nav-more-menu button {
+    background: none;
+    border: none;
+    text-align: left;
+    padding: 9px 12px;
+    border-radius: 7px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.5px;
+    color: var(--text);
+    cursor: pointer;
+    white-space: nowrap;
+    text-transform: uppercase;
+  }
+  .nav-more-menu button:hover { background: var(--surface2); }
 </style></head>
     <body>${content}</body></html>`);
   win.document.close();
