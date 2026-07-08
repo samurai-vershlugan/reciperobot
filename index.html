@@ -3523,6 +3523,8 @@ function onMealDragStart(e) {
   mealDragCtx = {
     grid, cards, card, startIdx, currentIdx: startIdx,
     slotCenters, pointerId: e.pointerId,
+    initialMouseX: e.clientX,
+    initialMouseY: e.clientY
   };
   card.classList.add('dragging');
   card.setPointerCapture(e.pointerId);
@@ -3534,9 +3536,8 @@ function onMealDragStart(e) {
 function onMealDragMove(e) {
   const ctx = mealDragCtx;
   if (!ctx) return;
-  const origin = ctx.slotCenters[ctx.startIdx];
-  const dx = e.clientX - origin.x;
-  const dy = e.clientY - origin.y;
+  const dx = e.clientX - ctx.initialMouseX;
+  const dy = e.clientY - ctx.initialMouseY;
   ctx.card.style.transform = `translate(${dx}px, ${dy}px)`;
 
   // find nearest slot (by straight-line distance) to the current pointer position
