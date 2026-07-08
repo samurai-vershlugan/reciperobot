@@ -211,10 +211,27 @@
     border: 1px solid var(--border);
     border-radius: 12px;
     overflow: hidden;
-    transition: border-color 0.2s, box-shadow 0.2s;
+    transition: border-color 0.2s, box-shadow 0.2s, transform 0.22s ease;
     display: flex;
     flex-direction: column;
   }
+  .day-card.dragging {
+    transition: none;
+    box-shadow: 0 10px 26px rgba(44,26,14,0.22);
+    z-index: 50;
+    position: relative;
+    opacity: 0.97;
+  }
+  .drag-handle {
+    font-size: 13px;
+    color: var(--text-muted);
+    cursor: grab;
+    touch-action: none;
+    padding: 2px 4px;
+    line-height: 1;
+    user-select: none;
+  }
+  .drag-handle:active { cursor: grabbing; }
   .day-card:hover { box-shadow: 0 4px 16px rgba(44,26,14,0.06); }
 
   .day-card:hover { border-color: var(--accent); }
@@ -3424,6 +3441,7 @@ function renderWeek() {
           <div style="display:flex;align-items:center;gap:6px">
             ${isLocked ? '<span class="lock-badge">locked</span>' : ''}
             <span class="day-date">${formatDayDate(dates[i])}</span>
+            <span class="drag-handle" data-idx="${i}" title="Drag to move this meal to another day">☰</span>
           </div>
         </div>
         <div class="day-meal">
@@ -3473,6 +3491,101 @@ function renderWeek() {
     toggleRotationLibrary(false);
   }
   updateConfirmBar();
+  initMealDragHandles();
+}
+
+// --- Drag to reorder meals across the responsive day-card grid ---
+// Works for any column layout (5-col desktop, 2-col tablet, 1-col mobile)
+// because targeting is based on proximity to each slot's actual on-screen
+// center point, not row/column math. Locks stay keyed by day-index, so a
+// locked slot just protects whatever meal ends up there after a reorder.
+let mealDragCtx = null;
+
+function initMealDragHandles() {
+  document.querySelectorAll('#weekGrid .drag-handle').forEach(h => {
+    h.onpointerdown = onMealDragStart;
+  });
+}
+
+function onMealDragStart(e) {
+  e.preventDefault();
+  const startIdx = parseInt(e.currentTarget.dataset.idx, 10);
+  const grid = document.getElementById('weekGrid');
+  const cards = Array.from(grid.querySelectorAll('.day-card'));
+  const card = cards[startIdx];
+  if (!card) return;
+
+  const slotCenters = cards.map(c => {
+    const r = c.getBoundingClientRect();
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  });
+
+  mealDragCtx = {
+    grid, cards, card, startIdx, currentIdx: startIdx,
+    slotCenters, pointerId: e.pointerId,
+  };
+  card.classList.add('dragging');
+  card.setPointerCapture(e.pointerId);
+  document.addEventListener('pointermove', onMealDragMove);
+  document.addEventListener('pointerup', onMealDragEnd);
+  document.addEventListener('pointercancel', onMealDragEnd);
+}
+
+function onMealDragMove(e) {
+  const ctx = mealDragCtx;
+  if (!ctx) return;
+  const origin = ctx.slotCenters[ctx.startIdx];
+  const dx = e.clientX - origin.x;
+  const dy = e.clientY - origin.y;
+  ctx.card.style.transform = `translate(${dx}px, ${dy}px)`;
+
+  // find nearest slot (by straight-line distance) to the current pointer position
+  let nearest = ctx.startIdx, best = Infinity;
+  ctx.slotCenters.forEach((c, i) => {
+    const d = (e.clientX - c.x) ** 2 + (e.clientY - c.y) ** 2;
+    if (d < best) { best = d; nearest = i; }
+  });
+
+  if (nearest !== ctx.currentIdx) {
+    const start = ctx.startIdx;
+    ctx.cards.forEach((c, i) => {
+      if (c === ctx.card) return;
+      let newSlot = i;
+      if (nearest > start && i > start && i <= nearest) newSlot = i - 1;
+      else if (nearest < start && i < start && i >= nearest) newSlot = i + 1;
+      if (newSlot !== i) {
+        const from = ctx.slotCenters[i];
+        const to = ctx.slotCenters[newSlot];
+        c.style.transform = `translate(${to.x - from.x}px, ${to.y - from.y}px)`;
+      } else {
+        c.style.transform = '';
+      }
+    });
+    ctx.currentIdx = nearest;
+  }
+}
+
+function onMealDragEnd() {
+  const ctx = mealDragCtx;
+  if (!ctx) return;
+  document.removeEventListener('pointermove', onMealDragMove);
+  document.removeEventListener('pointerup', onMealDragEnd);
+  document.removeEventListener('pointercancel', onMealDragEnd);
+
+  const { startIdx, currentIdx } = ctx;
+  ctx.cards.forEach(c => { c.style.transform = ''; c.classList.remove('dragging'); });
+  mealDragCtx = null;
+
+  if (currentIdx !== startIdx) {
+    const key = getWeekKey(currentWeekOffset);
+    const plan = weekPlans[key];
+    if (plan) {
+      const [moved] = plan.splice(startIdx, 1);
+      plan.splice(currentIdx, 0, moved);
+      persistWeekPlans();
+    }
+  }
+  renderWeek();
 }
 
 function shopName(s) {
