@@ -232,11 +232,10 @@
     user-select: none;
   }
   .drag-handle:active { cursor: grabbing; }
-  .day-card:hover { box-shadow: 0 4px 16px rgba(44,26,14,0.06); }
 
-  .day-card:hover { border-color: var(--accent); }
+  .day-card.dragging { box-shadow: 0 10px 26px rgba(44,26,14,0.22); border-color: var(--accent); }
   .day-card.friday-card { border-color: rgba(232,184,75,0.3); }
-  .day-card.friday-card:hover { border-color: var(--accent); }
+  .day-card.friday-card.dragging { border-color: var(--accent); }
 
   .day-header {
     padding: 10px 14px 8px;
