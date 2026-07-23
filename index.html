@@ -4130,8 +4130,8 @@ function normalizeIngredient(name) {
   s = s.split(',')[0];
   // Strip parentheticals
   s = s.replace(/\([^)]*\)/g, '');
-  // Collapse whitespace and stray punctuation
-  s = s.replace(/[^a-z\s]/g, ' ').replace(/\s+/g, ' ').trim();
+  // Collapse whitespace and stray punctuation (keep Unicode letters like ñ, é — not just a-z)
+  s = s.replace(/[^\p{L}\s]/gu, ' ').replace(/\s+/g, ' ').trim();
   // Stem each word to a singular match-form so plural/singular match (display is unaffected)
   s = s.split(' ').map(stemWord).join(' ').trim();
   return s;
