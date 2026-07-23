@@ -673,6 +673,35 @@
     margin-bottom: 12px;
   }
 
+  .og-sync-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 14px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+  .og-sync-btn {
+    background: linear-gradient(135deg, #4a9, #3d8a6e);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 10px 16px;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .og-sync-btn:disabled { opacity: 0.6; cursor: default; }
+  .og-sync-status {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+  .og-sync-status.synced { color: #4a9; }
+
   .alexa-icon {
     width: 28px;
     height: 28px;
@@ -2541,6 +2570,10 @@
           <div class="alexa-icon">◎</div>
           <div class="alexa-title">Our Groceries · Alexa Commands</div>
         </div>
+        <div class="og-sync-row">
+          <button class="og-sync-btn" id="ogSyncBtn" onclick="sendToOurGroceries()">🛒 Send to Our Groceries</button>
+          <div class="og-sync-status" id="ogSyncStatus"></div>
+        </div>
         <div class="alexa-voice-bar">
           <div class="voice-setting">
             <label class="input-label" style="margin:0">Wake word</label>
@@ -4238,6 +4271,8 @@ function renderAlexaCommands() {
     items.push({ item: clean, list: storeFull[it.store] || 'Trader Joes' });
   });
 
+  renderOurGroceriesSyncStatus();
+
   const el = document.getElementById('alexaCommands');
   el.innerHTML = '';
   if (!items.length) {
@@ -4251,6 +4286,93 @@ function renderAlexaCommands() {
     div.addEventListener('click', () => copyCmd(div, item, list));
     el.appendChild(div);
   });
+}
+
+// Collects the same unchecked/non-pantry items as the Alexa commands, but keeps
+// the internal store code (tj/costco/wf/safeway) instead of the full display name,
+// since that's what the ourgroceries-push Edge Function expects.
+function collectUnsentGroceryItems() {
+  const key = getWeekKey(currentWeekOffset);
+  syncGroceryList(key);
+  const list = (groceryLists[key] && groceryLists[key].items) || [];
+  const seen = new Set();
+  const items = [];
+  list.forEach(it => {
+    if (it.checked || havePantryItem(it.item || it.name)) return;
+    const clean = it.name || ingCleanName(it);
+    const dedupKey = clean.toLowerCase();
+    if (seen.has(dedupKey)) return;
+    seen.add(dedupKey);
+    items.push({ name: clean, store: it.store || 'tj' });
+  });
+  return items;
+}
+
+async function sendToOurGroceries() {
+  const key = getWeekKey(currentWeekOffset);
+  const items = collectUnsentGroceryItems();
+
+  if (!items.length) {
+    showToast('Nothing to send — all groceries checked off!');
+    return;
+  }
+
+  const btn = document.getElementById('ogSyncBtn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
+
+  try {
+    await ensureFreshToken();
+    const resp = await fetch(`${SUPABASE_URL}/functions/v1/ourgroceries-push`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${AUTH_TOKEN}`,
+      },
+      body: JSON.stringify({ items }),
+    });
+    const data = await resp.json();
+
+    if (data.error) {
+      showToast('Send failed: ' + data.error);
+      return;
+    }
+
+    if (!groceryLists[key]) groceryLists[key] = { items: [] };
+    groceryLists[key].ourGroceriesLastSync = new Date().toISOString();
+    persistGroceryLists();
+    persistWeekPlans();
+    renderOurGroceriesSyncStatus();
+
+    if (data.unmatched && data.unmatched.length) {
+      showToast(`Sent ${data.addedCount} item(s) — ${data.unmatched.length} didn't match a list, see console`);
+      console.warn('Our Groceries — unmatched items:', data.unmatched);
+    } else {
+      showToast(`Sent ${data.addedCount} item(s) to Our Groceries!`);
+    }
+  } catch (e) {
+    console.error('sendToOurGroceries error:', e);
+    showToast('Send failed — check your connection and try again.');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '🛒 Send to Our Groceries'; }
+  }
+}
+
+function renderOurGroceriesSyncStatus() {
+  const key = getWeekKey(currentWeekOffset);
+  const statusEl = document.getElementById('ogSyncStatus');
+  if (!statusEl) return;
+  const ts = groceryLists[key] && groceryLists[key].ourGroceriesLastSync;
+  if (!ts) {
+    statusEl.textContent = 'Not sent yet this week';
+    statusEl.classList.remove('synced');
+    return;
+  }
+  const d = new Date(ts);
+  const dateStr = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  const timeStr = d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  statusEl.textContent = `Last sent ${dateStr} at ${timeStr}`;
+  statusEl.classList.add('synced');
 }
 
 function alexaForMeal(dayIndex) {
@@ -6011,7 +6133,9 @@ async function persistWeekPlans() {
   const plan = weekPlans[key] || [];
   const label = document.getElementById('weekLabel')?.textContent || '';
   // Persistent grocery list for cross-device sync
-  const grocery = (groceryLists[key] && groceryLists[key].items) ? { items: groceryLists[key].items } : { items: [] };
+  const grocery = (groceryLists[key] && groceryLists[key].items)
+    ? { items: groceryLists[key].items, ourGroceriesLastSync: groceryLists[key].ourGroceriesLastSync || null }
+    : { items: [] };
   const weekStart = getWeekDates(currentWeekOffset)[0];
   const now = new Date(); now.setHours(0,0,0,0);
   const status = (weekStart < now && currentWeekOffset < 0) ? 'archived' : 'active';
@@ -6072,7 +6196,7 @@ async function loadWeekPlans() {
           // Restore persistent grocery list for cross-device sync
           const g = row.grocery_json;
           if (g && typeof g === 'object' && Array.isArray(g.items)) {
-            groceryLists[row.week_key] = { items: g.items };
+            groceryLists[row.week_key] = { items: g.items, ourGroceriesLastSync: g.ourGroceriesLastSync || null };
           }
         }
       });
