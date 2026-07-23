@@ -684,7 +684,7 @@
     flex-wrap: wrap;
   }
   .og-sync-btn {
-    background: linear-gradient(135deg, #4a9, #3d8a6e);
+    background: linear-gradient(135deg, #8cc33f, #4a8c32);
     color: #fff;
     border: none;
     border-radius: 10px;
@@ -693,7 +693,11 @@
     font-weight: 600;
     font-size: 13px;
     cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
   }
+  .og-sync-btn img { width: 18px; height: 18px; display: block; flex-shrink: 0; }
   .og-sync-btn:disabled { opacity: 0.6; cursor: default; }
   .og-sync-status {
     font-family: 'DM Mono', monospace;
@@ -2571,7 +2575,7 @@
           <div class="alexa-title">Our Groceries · Alexa Commands</div>
         </div>
         <div class="og-sync-row">
-          <button class="og-sync-btn" id="ogSyncBtn" onclick="sendToOurGroceries()">🛒 Send to Our Groceries</button>
+          <button class="og-sync-btn" id="ogSyncBtn" onclick="sendToOurGroceries()"><img src="data:image/png;base64,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" alt=""> <span>Send to Our Groceries</span></button>
           <div class="og-sync-status" id="ogSyncStatus"></div>
         </div>
         <div class="alexa-voice-bar">
@@ -4318,6 +4322,7 @@ async function sendToOurGroceries() {
   }
 
   const btn = document.getElementById('ogSyncBtn');
+  const btnOriginalHTML = btn ? btn.innerHTML : '';
   if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
 
   try {
@@ -4354,7 +4359,7 @@ async function sendToOurGroceries() {
     console.error('sendToOurGroceries error:', e);
     showToast('Send failed — check your connection and try again.');
   } finally {
-    if (btn) { btn.disabled = false; btn.textContent = '🛒 Send to Our Groceries'; }
+    if (btn) { btn.disabled = false; btn.innerHTML = btnOriginalHTML; }
   }
 }
 
