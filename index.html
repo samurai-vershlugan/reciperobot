@@ -1217,6 +1217,18 @@
     line-height: 1;
     flex: 0 0 auto;
   }
+  .settings-row { display:flex; align-items:center; justify-content:space-between; gap:14px; padding:16px 0; border-bottom:1px solid var(--border); margin-top:8px; }
+  .settings-row-text { display:flex; flex-direction:column; gap:3px; }
+  .settings-row-text b { font-size:15px; color:var(--text); }
+  .settings-row-text span { font-size:12px; color:var(--text-muted); }
+  .toggle-switch { position:relative; display:inline-block; width:46px; height:26px; flex:0 0 auto; }
+  .toggle-switch input { opacity:0; width:0; height:0; }
+  .toggle-slider { position:absolute; inset:0; background:var(--border2); border-radius:14px; cursor:pointer; transition:.2s; }
+  .toggle-slider:before { content:''; position:absolute; width:20px; height:20px; left:3px; top:3px; background:#fff; border-radius:50%; transition:.2s; box-shadow:0 1px 3px rgba(0,0,0,0.2); }
+  .toggle-switch input:checked + .toggle-slider { background:var(--accent); }
+  .toggle-switch input:checked + .toggle-slider:before { transform:translateX(20px); }
+  .settings-note { font-size:12px; color:var(--text-muted); margin-top:14px; line-height:1.5; }
+
   .recipe-ing-checkbox {
     width: 16px;
     height: 16px;
@@ -2525,6 +2537,7 @@
             <button onclick="saveWeekSnapshot(); closeNavMore()">💾 Save Week</button>
             <button onclick="showHistoryPage(); closeNavMore()">📅 Saved Weeks</button>
             <button onclick="sharePlan(); closeNavMore()">↗ Share</button>
+            <button onclick="openSettingsModal(); closeNavMore()">⚙ Settings</button>
           </div>
         </div>
       </div>
@@ -2881,6 +2894,24 @@
     <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border);text-align:right">
       <button class="login-back" onclick="pantryConfirmClear()" style="color:#c45c3a">Clear all pantry items</button>
     </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="settingsModal" onclick="if(event.target.id==='settingsModal') closeSettingsModal()">
+  <div class="modal" style="position:relative;max-width:440px;width:95%">
+    <button class="modal-close" onclick="closeSettingsModal()">×</button>
+    <h3>⚙ Settings</h3>
+    <div class="settings-row">
+      <div class="settings-row-text">
+        <b>Weekend meals</b>
+        <span>Add Saturday &amp; Sunday to your weekly plan</span>
+      </div>
+      <label class="toggle-switch">
+        <input type="checkbox" id="weekendMealsToggle" onchange="onWeekendMealsToggle(this.checked)">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+    <div class="settings-note">Weekend days are never auto-filled by Generate — they're always planned manually.</div>
   </div>
 </div>
 
@@ -6062,6 +6093,7 @@ async function bootApp() {
   setLoginSpinner(false);
   hideLoginScreen();
   await loadFamilyName();
+  await loadFamilySettings();
   loadLockedDays();
   await loadHaveIngredients();
   await loadWeekPlans();
@@ -7070,6 +7102,60 @@ function openPantryModal() {
 
 function closePantryModal() {
   document.getElementById('pantryModal').classList.remove('open');
+}
+
+// ─── FAMILY SETTINGS ──────────────────────────────────────────────────────────
+
+let familySettings = { weekendMealsEnabled: false };
+
+async function loadFamilySettings() {
+  if (!FAMILY_ID) return;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/families?id=eq.${FAMILY_ID}&select=settings_json`, {
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${AUTH_TOKEN}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    const rows = await res.json();
+    if (rows && rows.length && rows[0].settings_json) {
+      familySettings = { weekendMealsEnabled: false, ...rows[0].settings_json };
+    }
+  } catch(e) { console.warn('loadFamilySettings error:', e); }
+}
+
+async function saveFamilySettings() {
+  if (!FAMILY_ID) return;
+  try {
+    await fetch(`${SUPABASE_URL}/rest/v1/families?id=eq.${FAMILY_ID}`, {
+      method: 'PATCH',
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${AUTH_TOKEN}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify({ settings_json: familySettings })
+    });
+  } catch(e) { console.warn('saveFamilySettings error:', e); }
+}
+
+function openSettingsModal() {
+  document.getElementById('weekendMealsToggle').checked = !!familySettings.weekendMealsEnabled;
+  document.getElementById('settingsModal').classList.add('open');
+}
+
+function closeSettingsModal() {
+  document.getElementById('settingsModal').classList.remove('open');
+}
+
+async function onWeekendMealsToggle(checked) {
+  familySettings.weekendMealsEnabled = checked;
+  await saveFamilySettings();
+  showToast(checked ? 'Weekend meals enabled' : 'Weekend meals disabled');
+  // NOTE: rendering/grid changes for 6-7 day weeks land in the next step —
+  // toggling this right now just saves the preference, doesn't change the grid yet.
 }
 
 function renderPantryItems() {
