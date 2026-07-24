@@ -3342,9 +3342,10 @@ const SHORT_DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 // weekend-meals setting was toggled off still shows its weekend days). Otherwise
 // falls back to the family setting, for a week that hasn't been created yet.
 function currentWeekDayCount() {
+  if (!familySettings.weekendMealsEnabled) return 5;
   const key = getWeekKey(currentWeekOffset);
   if (weekPlans[key] && weekPlans[key].length) return weekPlans[key].length;
-  return familySettings.weekendMealsEnabled ? 7 : 5;
+  return 7;
 }
 function getActiveDays() { return DAYS.slice(0, currentWeekDayCount()); }
 function getActiveShortDays() { return SHORT_DAYS.slice(0, currentWeekDayCount()); }
@@ -3509,20 +3510,22 @@ function renderWeek() {
   if (extended) persistWeekPlans();
 
   const plan = weekPlans[key];
-  const dates = getWeekDates(currentWeekOffset, plan.length);
+  const displayCount = currentWeekDayCount();
+  const visiblePlan = plan.slice(0, displayCount);
+  const dates = getWeekDates(currentWeekOffset, displayCount);
   document.getElementById('weekLabel').textContent = formatWeekLabel(dates);
 
   const grid = document.getElementById('weekGrid');
   grid.innerHTML = '';
-  grid.classList.toggle('days-7', plan.length > 5);
+  grid.classList.toggle('days-7', displayCount > 5);
 
-  // Sunday prep card — appears if any meal this week has prepIds
-  const prepRecipes = getPrepRecipesForWeek(plan);
+  // Sunday prep card — appears if any *visible* meal this week has prepIds
+  const prepRecipes = getPrepRecipesForWeek(visiblePlan);
   if (prepRecipes.length) {
     grid.appendChild(renderSundayPrepCard(prepRecipes));
   }
 
-  plan.forEach((meal, i) => {
+  visiblePlan.forEach((meal, i) => {
     const isFri = i === 4;
     const lk = getLockKey(key, i);
     const isLocked = !!lockedDays[lk];
@@ -4300,7 +4303,7 @@ async function updatePantryQty(itemName, newQty) {
 function updateConfirmBar() {
   const key = getWeekKey(currentWeekOffset);
   const plan = weekPlans[key] || [];
-  const total = new Set(plan.flatMap(m => (m.ingredients||[]).map(i => i.item))).size;
+  const total = new Set(plan.flatMap(m => (m && m.ingredients || []).map(i => i.item))).size;
   const checked = Object.entries(checkedIngredients).filter(([k,v]) => k.startsWith(key+'-') && !v).length;
   const toAdd = total - Object.entries(checkedIngredients).filter(([k,v]) => k.startsWith(key+'-') && v).length;
   
@@ -4487,6 +4490,7 @@ function confirmPlan() {
   const seen = new Set();
   const items = [];
   plan.forEach(meal => {
+    if (!meal) return;
     (meal.ingredients||[]).forEach(ing => {
       const itemKey = `${key}-${ing.item}`;
       if (!seen.has(ing.item) && !checkedIngredients[itemKey] && !havePantryItem(ing.item)) {
