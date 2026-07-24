@@ -3768,15 +3768,23 @@ function planIngredients(key) {
   // `amount` was ALSO explicitly given (meaning it was properly pre-split already).
   // Otherwise always parse the raw text — a name with no amount is usually just
   // unparsed raw text (e.g. "4 cubes frozen garlic") that still needs splitting.
-  function resolveIngredientParts(ing) {
-    if (ing.amount) return { name: ing.name || ing.item, amount: ing.amount };
-    return parseIngredientParts(ing.item || ing.name);
+  // Returns an ARRAY since a combined line like "Kosher salt and black pepper"
+  // needs to become two separate grocery items, not one merged one.
+  function resolveIngredientPartsList(ing) {
+    if (ing.amount) return [{ name: ing.name || ing.item, amount: ing.amount }];
+    const raw = ing.item || ing.name || '';
+    const saltPepperMatch = raw.match(/^(.*?\bsalt\b.*?)\s*(?:,|&|\band\b)\s*(.*?\bpepper\b.*?)$/i);
+    if (saltPepperMatch) {
+      return [parseIngredientParts(saltPepperMatch[1].trim()), parseIngredientParts(saltPepperMatch[2].trim())];
+    }
+    return [parseIngredientParts(raw)];
   }
   // Prep recipes
   getPrepRecipesForWeek(plan).forEach(pr => {
     (pr.ingredients || []).forEach(ing => {
-      const parts = resolveIngredientParts(ing);
-      out.push({ name: parts.name, item: ing.item, amount: parts.amount, store: ing.store || 'tj', recipe: pr.name || 'Prep' });
+      resolveIngredientPartsList(ing).forEach(parts => {
+        out.push({ name: parts.name, item: ing.item, amount: parts.amount, store: ing.store || 'tj', recipe: pr.name || 'Prep' });
+      });
     });
   });
   // Planned meals
@@ -3788,8 +3796,9 @@ function planIngredients(key) {
     if (protein && protein.item) mealIngs.push(protein);
     (liveMeal.ingredients || []).forEach(ing => mealIngs.push(ing));
     mealIngs.forEach(ing => {
-      const parts = resolveIngredientParts(ing);
-      out.push({ name: parts.name, item: ing.item, amount: parts.amount, store: ing.store || 'tj', recipe: meal.name });
+      resolveIngredientPartsList(ing).forEach(parts => {
+        out.push({ name: parts.name, item: ing.item, amount: parts.amount, store: ing.store || 'tj', recipe: meal.name });
+      });
     });
   });
   return out;
@@ -8986,7 +8995,7 @@ async function confirmDiscoverEdit() {
   } else {
     // Opened from Discover/Robot/Similar with no day context — offer to plan it right away
     showToast(`"${name}" saved to your library!`);
-    quickAddRecipeToDay(name);
+    setTimeout(() => quickAddRecipeToDay(name), 150);
   }
 }
 
