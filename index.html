@@ -1620,7 +1620,7 @@
     }
     .main { grid-template-columns: 1fr; }
     .planner { padding: 16px; }
-    .week-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+    .week-grid, .week-grid.days-7 { grid-template-columns: 1fr 1fr; gap: 8px; }
     .day-card { padding: 10px 12px; }
     .meal-name { font-size: 13px; }
     .sidebar { padding: 0 16px 16px; }
@@ -1664,7 +1664,7 @@
   }
 
   @media (max-width: 480px) {
-    .week-grid { grid-template-columns: 1fr; }
+    .week-grid, .week-grid.days-7 { grid-template-columns: 1fr; }
     .logo-sub { display: none; }
     .week-label { font-size: 10px; }
     .history-card-meals { flex-direction: column; }
