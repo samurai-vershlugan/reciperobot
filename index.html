@@ -4252,7 +4252,7 @@ function normalizeIngredient(name) {
   // Remove common units and measurement words (now also catches stray single letters)
   s = s.replace(/\b(tsp|teaspoon|teaspoons|tbsp|tablespoon|tablespoons|cup|cups|oz|ounce|ounces|lb|lbs|pound|pounds|g|gram|grams|kg|ml|l|liter|litre|tin|tins|can|cans|clove|cloves|cube|cubes|inch|inches|pinch|handful|bunch|sprig|sprigs|slice|slices|stick|sticks|piece|pieces|fillet|fillets)\b/g, '');
   // Remove prep / descriptor words
-  s = s.replace(/\b(fresh|dried|ground|crushed|minced|chopped|finely|drained|very|well|extra|large|medium|small|skin-on|skin\s*on|bone-in|bone\s*in|boneless|skinless|to serve|to taste|for serving|for garnish|for drizzling|garnish|garnishing|drizzling|serving|of|the|and|or|for|x)\b/g, '');
+  s = s.replace(/\b(fresh|freshly|dried|ground|crushed|minced|chopped|finely|coarsely|roughly|thinly|thickly|lightly|drained|squeezed|juiced|peeled|seeded|deveined|trimmed|halved|quartered|diced|sliced|softened|melted|cooled|room\s*temperature|very|well|extra|large|medium|small|skin-on|skin\s*on|bone-in|bone\s*in|boneless|skinless|to serve|to taste|for serving|for garnish|for drizzling|garnish|garnishing|drizzling|serving|of|the|and|or|for|x)\b/g, '');
   // "zest of 1 lemon" / "juice of 1 lemon" -> "lemon"
   s = s.replace(/\b(zest|juice)\b/g, '');
   // Strip anything after a comma (prep notes)
@@ -7439,6 +7439,7 @@ let robotProtein = null;
 
 function openRobotModal() {
   robotProtein = null;
+  addLibraryDayIndex = null;
   document.getElementById('robotResults').innerHTML = '';
   document.getElementById('robotResultsView').style.display = 'none';
   document.getElementById('robotSetupView').style.display = 'block';
@@ -7953,6 +7954,7 @@ let discoverSimilarTo = null;
 
 function openDiscoverModal() {
   discoverSimilarTo = null;
+  addLibraryDayIndex = null;
   document.getElementById('discoverResults').innerHTML = '';
   document.getElementById('discoverModal').classList.add('open');
   // Wire mood buttons
@@ -8970,7 +8972,22 @@ async function confirmDiscoverEdit() {
   renderRotationGrid();
   renderWeek(); // refresh day cards so tag/name changes show immediately
   closeDiscoverEditModal();
-  showToast(`"${name}" saved to your library!`);
+
+  if (addLibraryDayIndex !== null) {
+    // Opened from a specific empty day's "+ Add a meal" — assign directly, no extra prompt
+    const dayIdx = addLibraryDayIndex;
+    const key = getWeekKey(currentWeekOffset);
+    if (!weekPlans[key]) weekPlans[key] = Array(currentWeekDayCount()).fill(null);
+    weekPlans[key][dayIdx] = { ...recipe };
+    persistWeekPlans();
+    addLibraryDayIndex = null;
+    renderWeek();
+    showToast(`"${name}" saved and added to ${DAYS[dayIdx]}!`);
+  } else {
+    // Opened from Discover/Robot/Similar with no day context — offer to plan it right away
+    showToast(`"${name}" saved to your library!`);
+    quickAddRecipeToDay(name);
+  }
 }
 
 (async () => {
