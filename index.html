@@ -201,13 +201,12 @@
 
   .week-grid {
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
     gap: 16px;
     margin-bottom: 32px;
   }
-  .week-grid.days-7 {
-    grid-template-columns: repeat(7, 1fr);
-    gap: 12px;
+  .week-grid.view-stack {
+    grid-template-columns: 1fr;
   }
 
   .day-card {
@@ -1323,6 +1322,17 @@
     height: 1px;
     background: var(--border);
   }
+  .week-view-toggle { display: flex; gap: 4px; flex: 0 0 auto; }
+  .view-toggle-btn {
+    width: 30px; height: 30px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-muted);
+    font-size: 14px;
+    cursor: pointer;
+  }
+  .view-toggle-btn.active { background: var(--accent); color: var(--bg); border-color: var(--accent); }
 
   /* Confirm bar */
   .confirm-btn {
@@ -1626,7 +1636,7 @@
     }
     .main { grid-template-columns: 1fr; }
     .planner { padding: 16px; }
-    .week-grid, .week-grid.days-7 { grid-template-columns: 1fr 1fr; gap: 8px; }
+    .week-grid, .week-grid.days-7, .week-grid.view-stack { grid-template-columns: 1fr 1fr; gap: 8px; }
     .day-card { padding: 10px 12px; }
     .meal-name { font-size: 13px; }
     .sidebar { padding: 0 16px 16px; }
@@ -1670,7 +1680,7 @@
   }
 
   @media (max-width: 480px) {
-    .week-grid, .week-grid.days-7 { grid-template-columns: 1fr; }
+    .week-grid, .week-grid.days-7, .week-grid.view-stack { grid-template-columns: 1fr; }
     .logo-sub { display: none; }
     .week-label { font-size: 10px; }
     .history-card-meals { flex-direction: column; }
@@ -2572,7 +2582,13 @@
 
 <div class="main" id="appMain" style="display:none">
   <div class="planner">
-    <div class="section-label">This Week's Plan</div>
+    <div style="display:flex;align-items:center;gap:12px;justify-content:space-between;margin-bottom:16px">
+      <div class="section-label" style="margin-bottom:0;flex:1">This Week's Plan</div>
+      <div class="week-view-toggle" id="weekViewToggle">
+        <button class="view-toggle-btn" data-view="stack" onclick="setWeekView('stack')" title="Stacked cards">☰</button>
+        <button class="view-toggle-btn" data-view="grid" onclick="setWeekView('grid')" title="Wrapping grid">▦</button>
+      </div>
+    </div>
     <div class="week-grid" id="weekGrid"></div>
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
       <button class="rotation-toggle" id="rotationToggle" onclick="toggleRotationLibrary()">
@@ -3464,6 +3480,19 @@ function toggleDarkMode() {
   const btn = document.getElementById('darkToggleBtn');
   if (btn) btn.textContent = isDark ? '☀' : '🌙';
 }
+function setWeekView(view) {
+  localStorage.setItem('mealos-week-view', view);
+  applyWeekView();
+}
+function applyWeekView() {
+  const view = localStorage.getItem('mealos-week-view') || 'grid';
+  const grid = document.getElementById('weekGrid');
+  if (grid) grid.classList.toggle('view-stack', view === 'stack');
+  document.querySelectorAll('.view-toggle-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.view === view);
+  });
+}
+
 function initDarkMode() {
   const pref = localStorage.getItem('mealos-dark');
   const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -3537,7 +3566,7 @@ function renderWeek() {
 
   const grid = document.getElementById('weekGrid');
   grid.innerHTML = '';
-  grid.classList.toggle('days-7', displayCount > 5);
+  applyWeekView();
 
   // Sunday prep card — appears if any *visible* meal this week has prepIds
   const prepRecipes = getPrepRecipesForWeek(visiblePlan);
