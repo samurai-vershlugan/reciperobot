@@ -3735,10 +3735,18 @@ function planIngredients(key) {
   const visibleCount = familySettings.weekendMealsEnabled ? fullPlan.length : Math.min(fullPlan.length, 5);
   const plan = fullPlan.slice(0, visibleCount);
   const out = []; // { name, item, amount, store, recipe }
+  // Resolve an ingredient's display name/amount. Only trust a pre-set `name` when
+  // `amount` was ALSO explicitly given (meaning it was properly pre-split already).
+  // Otherwise always parse the raw text — a name with no amount is usually just
+  // unparsed raw text (e.g. "4 cubes frozen garlic") that still needs splitting.
+  function resolveIngredientParts(ing) {
+    if (ing.amount) return { name: ing.name || ing.item, amount: ing.amount };
+    return parseIngredientParts(ing.item || ing.name);
+  }
   // Prep recipes
   getPrepRecipesForWeek(plan).forEach(pr => {
     (pr.ingredients || []).forEach(ing => {
-      const parts = ing.name ? { name: ing.name, amount: ing.amount || '' } : parseIngredientParts(ing.item);
+      const parts = resolveIngredientParts(ing);
       out.push({ name: parts.name, item: ing.item, amount: parts.amount, store: ing.store || 'tj', recipe: pr.name || 'Prep' });
     });
   });
@@ -3751,7 +3759,7 @@ function planIngredients(key) {
     if (protein && protein.item) mealIngs.push(protein);
     (liveMeal.ingredients || []).forEach(ing => mealIngs.push(ing));
     mealIngs.forEach(ing => {
-      const parts = ing.name ? { name: ing.name, amount: ing.amount || '' } : parseIngredientParts(ing.item);
+      const parts = resolveIngredientParts(ing);
       out.push({ name: parts.name, item: ing.item, amount: parts.amount, store: ing.store || 'tj', recipe: meal.name });
     });
   });
@@ -4192,6 +4200,7 @@ const NO_STEM_WORDS = new Set([
 // Reduce a word to a singular match-stem (for pantry/grocery matching only — never displayed)
 function stemWord(w) {
   if (!w || NO_STEM_WORDS.has(w)) return w;
+  if (w.endsWith("'s") || w.endsWith('’s')) return w;   // possessive (TJ's, etc.) — not a plural
   if (w.length <= 3) return w;                 // pea(s), fig(s), egg -> leave very short words
   if (w.endsWith('ss') || w.endsWith('us')) return w;
   if (w.endsWith('ies') && w.length > 4) return w.slice(0, -3) + 'y'; // berries->berry
@@ -4212,17 +4221,18 @@ function normalizeIngredient(name) {
   // Remove standalone measurement-range artifacts like "- 120" or leftover dashes
   s = s.replace(/^[\s\-–—]+/, '');
   // Remove common units and measurement words (now also catches stray single letters)
-  s = s.replace(/\b(tsp|teaspoon|teaspoons|tbsp|tablespoon|tablespoons|cup|cups|oz|ounce|ounces|lb|lbs|pound|pounds|g|gram|grams|kg|ml|l|liter|litre|tin|tins|can|cans|clove|cloves|cube|cubes|pinch|handful|bunch|sprig|sprigs|slice|slices|stick|sticks|piece|pieces|fillet|fillets)\b/g, '');
+  s = s.replace(/\b(tsp|teaspoon|teaspoons|tbsp|tablespoon|tablespoons|cup|cups|oz|ounce|ounces|lb|lbs|pound|pounds|g|gram|grams|kg|ml|l|liter|litre|tin|tins|can|cans|clove|cloves|cube|cubes|inch|inches|pinch|handful|bunch|sprig|sprigs|slice|slices|stick|sticks|piece|pieces|fillet|fillets)\b/g, '');
   // Remove prep / descriptor words
-  s = s.replace(/\b(fresh|dried|ground|crushed|minced|chopped|finely|drained|very|well|extra|large|medium|small|skin-on|skin\s*on|bone-in|bone\s*in|boneless|skinless|to serve|to taste|of|the|and|or|x)\b/g, '');
+  s = s.replace(/\b(fresh|dried|ground|crushed|minced|chopped|finely|drained|very|well|extra|large|medium|small|skin-on|skin\s*on|bone-in|bone\s*in|boneless|skinless|to serve|to taste|for serving|for garnish|for drizzling|garnish|garnishing|drizzling|serving|of|the|and|or|for|x)\b/g, '');
   // "zest of 1 lemon" / "juice of 1 lemon" -> "lemon"
   s = s.replace(/\b(zest|juice)\b/g, '');
   // Strip anything after a comma (prep notes)
   s = s.split(',')[0];
   // Strip parentheticals
   s = s.replace(/\([^)]*\)/g, '');
-  // Collapse whitespace and stray punctuation (keep Unicode letters like ñ, é — not just a-z)
-  s = s.replace(/[^\p{L}\s]/gu, ' ').replace(/\s+/g, ' ').trim();
+  // Collapse whitespace and stray punctuation (keep Unicode letters like ñ, é, and
+  // apostrophes so brand names like "TJ's" don't get mangled into "tj s")
+  s = s.replace(/[^\p{L}\s'’]/gu, ' ').replace(/\s+/g, ' ').trim();
   // Stem each word to a singular match-form so plural/singular match (display is unaffected)
   s = s.split(' ').map(stemWord).join(' ').trim();
   return s;
