@@ -205,6 +205,10 @@
     gap: 16px;
     margin-bottom: 32px;
   }
+  .week-grid.days-7 {
+    grid-template-columns: repeat(7, 1fr);
+    gap: 12px;
+  }
 
   .day-card {
     background: var(--surface);
@@ -3272,10 +3276,11 @@ function getMondayOfCurrentWeek() {
   return getMondayOfWeek(0);
 }
 
-function getWeekDates(offset) {
+function getWeekDates(offset, dayCount) {
   const base = getMondayOfWeek(offset);
+  const count = dayCount || 5;
   const days = [];
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < count; i++) {
     const d = new Date(base);
     d.setDate(base.getDate() + i);
     days.push(d);
@@ -3285,7 +3290,7 @@ function getWeekDates(offset) {
 
 function formatWeekLabel(dates) {
   const opts = { month: 'short', day: 'numeric' };
-  return `${dates[0].toLocaleDateString('en-US', opts)} – ${dates[4].toLocaleDateString('en-US', opts)}`;
+  return `${dates[0].toLocaleDateString('en-US', opts)} – ${dates[dates.length - 1].toLocaleDateString('en-US', opts)}`;
 }
 
 function formatDayDate(date) {
@@ -3329,8 +3334,21 @@ function generateWeekPlan() {
 
 // ─── RENDER ──────────────────────────────────────────────────────────────────
 
-const DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday'];
-const SHORT_DAYS = ['Mon','Tue','Wed','Thu','Fri'];
+const DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+const SHORT_DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+
+// How many days are "active" for the week currently being viewed. If that week
+// already has a plan, its actual array length wins (so a week planned before the
+// weekend-meals setting was toggled off still shows its weekend days). Otherwise
+// falls back to the family setting, for a week that hasn't been created yet.
+function currentWeekDayCount() {
+  const key = getWeekKey(currentWeekOffset);
+  if (weekPlans[key] && weekPlans[key].length) return weekPlans[key].length;
+  return familySettings.weekendMealsEnabled ? 7 : 5;
+}
+function getActiveDays() { return DAYS.slice(0, currentWeekDayCount()); }
+function getActiveShortDays() { return SHORT_DAYS.slice(0, currentWeekDayCount()); }
+function currentWeekDayIndexes() { return Array.from({length: currentWeekDayCount()}, (_, i) => i); }
 
 function getPrepRecipesForWeek(plan) {
   const prepIds = new Set();
@@ -3447,7 +3465,7 @@ function loadLockedDays() {
   try { lockedDays = JSON.parse(localStorage.getItem('mealos-locks') || '{}'); } catch(e) {}
   // Always start the current week unlocked
   const key = getWeekKey(currentWeekOffset);
-  [0,1,2,3,4].forEach(i => delete lockedDays[getLockKey(key, i)]);
+  currentWeekDayIndexes().forEach(i => delete lockedDays[getLockKey(key, i)]);
 }
 
 function escapeHtml(s) {
@@ -3473,20 +3491,30 @@ function editMealNote(dayIndex) {
 }
 
 function renderWeek() {
-  const dates = getWeekDates(currentWeekOffset);
-  document.getElementById('weekLabel').textContent = formatWeekLabel(dates);
-
   const key = getWeekKey(currentWeekOffset);
+  let extended = false;
   if (!weekPlans[key]) {
     weekPlans[key] = generateWeekPlan();
+    if (familySettings.weekendMealsEnabled) weekPlans[key].push(null, null);
     // New week — clear any stale locks
-    [0,1,2,3,4].forEach(i => delete lockedDays[getLockKey(key, i)]);
-    persistWeekPlans();
+    currentWeekDayIndexes().forEach(i => delete lockedDays[getLockKey(key, i)]);
+    extended = true;
+  } else if (familySettings.weekendMealsEnabled && weekPlans[key].length < 7) {
+    // Existing week predates the setting being turned on — extend it with empty weekend days.
+    // Never truncate the other direction — a week already planned with weekend days keeps them
+    // even if the setting later gets turned off.
+    while (weekPlans[key].length < 7) weekPlans[key].push(null);
+    extended = true;
   }
+  if (extended) persistWeekPlans();
+
   const plan = weekPlans[key];
+  const dates = getWeekDates(currentWeekOffset, plan.length);
+  document.getElementById('weekLabel').textContent = formatWeekLabel(dates);
 
   const grid = document.getElementById('weekGrid');
   grid.innerHTML = '';
+  grid.classList.toggle('days-7', plan.length > 5);
 
   // Sunday prep card — appears if any meal this week has prepIds
   const prepRecipes = getPrepRecipesForWeek(plan);
@@ -5197,7 +5225,7 @@ function renderRecipeFilters() {
 
 function allDaysLocked() {
   const key = getWeekKey(currentWeekOffset);
-  return [0,1,2,3,4].every(i => !!lockedDays[getLockKey(key, i)]);
+  return currentWeekDayIndexes().every(i => !!lockedDays[getLockKey(key, i)]);
 }
 
 function quickAddRecipeToDay(recipeName) {
@@ -5215,7 +5243,7 @@ function quickAddRecipeToDay(recipeName) {
 
   const row = document.createElement('div');
   row.className = 'quick-day-row';
-  SHORT_DAYS.forEach((d, i) => {
+  getActiveShortDays().forEach((d, i) => {
     const b = document.createElement('button');
     b.className = 'quick-day-btn';
     b.textContent = d;
@@ -5343,7 +5371,7 @@ function changeWeek(delta) {
   const key = getWeekKey(currentWeekOffset);
   // If navigating to a week with no plan yet, clear any stale locks
   if (!weekPlans[key]) {
-    [0,1,2,3,4].forEach(i => delete lockedDays[getLockKey(key, i)]);
+    currentWeekDayIndexes().forEach(i => delete lockedDays[getLockKey(key, i)]);
   }
   renderWeek();
 }
@@ -5377,13 +5405,20 @@ function generateWeek() {
   const existing = weekPlans[key] || [];
   const newPlan = generateWeekPlan();
 
-  // Preserve locked days, unlock everything else
+  // Preserve locked days, unlock everything else (weekdays only — Generate never touches weekends)
   const finalPlan = newPlan.map((meal, i) => {
     const lk = getLockKey(key, i);
     return lockedDays[lk] ? existing[i] : meal;
   });
 
-  // Clear any stale locks for days that got new meals
+  // Weekend days (index 5+) are never auto-generated, locked or not — carry
+  // whatever was already there forward untouched, whether that's a planned
+  // meal or still empty.
+  for (let i = 5; i < existing.length; i++) {
+    finalPlan[i] = existing[i];
+  }
+
+  // Clear any stale locks for weekdays that got new meals (weekend locks, if any, are untouched)
   [0,1,2,3,4].forEach(i => {
     const lk = getLockKey(key, i);
     if (!lockedDays[lk]) delete lockedDays[lk];
@@ -5571,7 +5606,7 @@ function openRecipeModal(recipeName, fromDayIndex = null) {
   // Add-to-day buttons — highlight current day if opened from a day card
   const dayBtns = document.getElementById('recipeModalDayBtns');
   dayBtns.innerHTML = '';
-  DAYS.forEach((d, i) => {
+  getActiveDays().forEach((d, i) => {
     const btn = document.createElement('button');
     btn.className = `recipe-modal-day-btn${fromDayIndex === i ? ' active-day' : ''}`;
     btn.textContent = fromDayIndex === i ? `↺ ${d}` : d;
@@ -6101,7 +6136,7 @@ async function bootApp() {
   if (!weekPlans[key]) {
     weekPlans[key] = generateWeekPlan();
     // New week — start with no locks
-    [0,1,2,3,4].forEach(i => delete lockedDays[getLockKey(key, i)]);
+    currentWeekDayIndexes().forEach(i => delete lockedDays[getLockKey(key, i)]);
     persistWeekPlans();
   }
   loadTagOverrides();
@@ -6459,7 +6494,7 @@ function closeRecipeModal(e) {
 function assignRecipeToDay(recipeName, dayIndex) {
   const recipe = getAllRecipes().find(r => r.name === recipeName) || { name: recipeName, tags:[], shop:null, ingredients:[] };
   const key = getWeekKey(currentWeekOffset);
-  if (!weekPlans[key]) weekPlans[key] = Array(5).fill(null);
+  if (!weekPlans[key]) weekPlans[key] = Array(currentWeekDayCount()).fill(null);
   // Store selected protein with the meal so grocery list uses it
   const mealToStore = { ...recipe };
   if (currentRecipeProtein) mealToStore.selectedProtein = currentRecipeProtein;
@@ -6494,7 +6529,7 @@ function confirmQuickAdd() {
   const name = document.getElementById('quickAddInput').value.trim();
   if (!name) return;
   const key = getWeekKey(currentWeekOffset);
-  if (!weekPlans[key]) weekPlans[key] = Array(5).fill(null);
+  if (!weekPlans[key]) weekPlans[key] = Array(currentWeekDayCount()).fill(null);
   weekPlans[key][quickAddDayIndex] = { name, tags:['custom'], shop:null, ingredients:[], custom:true };
   document.getElementById('quickAddModal').classList.remove('open');
   persistWeekPlans();
@@ -6555,7 +6590,7 @@ async function confirmAddLibrary() {
   // If opened from a day card, assign to that day
   if (addLibraryDayIndex !== null) {
     const key = getWeekKey(currentWeekOffset);
-    if (!weekPlans[key]) weekPlans[key] = Array(5).fill(null);
+    if (!weekPlans[key]) weekPlans[key] = Array(currentWeekDayCount()).fill(null);
     weekPlans[key][addLibraryDayIndex] = { ...recipe };
     persistWeekPlans();
   }
