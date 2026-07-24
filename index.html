@@ -1495,9 +1495,12 @@
 
   .empty-day {
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
+    gap: 6px;
     min-height: 60px;
+    padding: 8px 0;
     cursor: pointer;
     border: 1px dashed var(--border);
     border-radius: 6px;
@@ -1511,6 +1514,17 @@
     transition: color 0.15s;
   }
   .empty-day:hover .empty-day-prompt { color: var(--accent); }
+  .empty-day-new-link {
+    font-size: 11px;
+    color: var(--text-muted);
+    opacity: 0.7;
+    background: none;
+    border: none;
+    text-decoration: underline;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .empty-day-new-link:hover { opacity: 1; color: var(--accent); }
 
   .custom-badge {
     font-size: 10px;
@@ -3573,8 +3587,9 @@ function renderWeek() {
           <span class="day-name">${DAYS[i]}</span>
           <span class="day-date">${formatDayDate(dates[i])}</span>
         </div>
-        <div class="day-meal empty-day" onclick="openAddLibraryModal(${i})">
-          <div class="empty-day-prompt">＋ Add a meal</div>
+        <div class="day-meal empty-day">
+          <div class="empty-day-prompt" onclick="openSwapModal(${i})">＋ Add a meal</div>
+          <button class="empty-day-new-link" onclick="event.stopPropagation();openAddLibraryModal(${i})">or create a new recipe</button>
         </div>
       `;
     }
@@ -4618,7 +4633,9 @@ function openSwapModal(dayIndex) {
   swapTarget = dayIndex;
   const key = getWeekKey(currentWeekOffset);
   const current = weekPlans[key][dayIndex];
-  document.getElementById('swapDay').textContent = `Replacing: ${DAYS[dayIndex]} — ${getMealDisplayName(current)}`;
+  document.getElementById('swapDay').textContent = current && current.name
+    ? `Replacing: ${DAYS[dayIndex]} — ${getMealDisplayName(current)}`
+    : `Add a meal for ${DAYS[dayIndex]}`;
   activeFilter = 'all';
   activeTagFilter = null;
   activeProteinFilter = null;
@@ -7193,8 +7210,7 @@ async function onWeekendMealsToggle(checked) {
   familySettings.weekendMealsEnabled = checked;
   await saveFamilySettings();
   showToast(checked ? 'Weekend meals enabled' : 'Weekend meals disabled');
-  // NOTE: rendering/grid changes for 6-7 day weeks land in the next step —
-  // toggling this right now just saves the preference, doesn't change the grid yet.
+  renderWeek();
 }
 
 function renderPantryItems() {
