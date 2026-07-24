@@ -321,6 +321,12 @@
     border-radius: 3px;
     text-transform: uppercase;
   }
+  .tag-cuisine, .tag-protein {
+    font-weight: 700;
+    font-size: 9px;
+  }
+  .tag-cuisine { background: rgba(74,127,165,0.25); color: #5a9abe; border: 1px solid rgba(74,127,165,0.45); }
+  .tag-protein { background: rgba(160,92,42,0.3);   color: #d4895a; border: 1px solid rgba(160,92,42,0.5); }
 
   /* Category mirror tags — shown in swap modal only, not on cards */
   .tag-chicken { background: rgba(160,92,42,0.25); color: #d4895a; border: 1px solid rgba(160,92,42,0.4); }
@@ -3547,6 +3553,7 @@ function renderWeek() {
     card.className = `day-card${isFri ? ' friday-card' : ''}${isLocked ? ' locked-card' : ''}`;
 
     if (meal && meal.name) {
+      const liveMeal = getAllRecipes().find(r => r.name === meal.name) || meal;
       card.innerHTML = `
         <div class="day-header">
           <span class="day-name">${DAYS[i]}</span>
@@ -3557,17 +3564,16 @@ function renderWeek() {
           </div>
         </div>
         <div class="day-meal">
-          ${(() => { const lm = getAllRecipes().find(r => r.name === meal.name) || meal; return lm.image ? `<div class="meal-photo meal-name-tappable" style="background-image:url('${lm.image}')"></div>` : ''; })()}
+          ${liveMeal.image ? `<div class="meal-photo meal-name-tappable" style="background-image:url('${liveMeal.image}')"></div>` : ''}
           <div class="meal-card-top">
-            ${(() => { const lm = getAllRecipes().find(r => r.name === meal.name) || meal; return lm.image ? '' : `<div class="meal-thumb meal-name-tappable">${mealEmoji(meal)}</div>`; })()}
+            ${liveMeal.image ? '' : `<div class="meal-thumb meal-name-tappable">${mealEmoji(meal)}</div>`}
             <div class="meal-name meal-name-tappable">${getMealDisplayName(meal)}</div>
           </div>
           <div class="meal-card-mid">
-            <div class="meal-preview">
-              ${mealPreviewIngredients(meal, 3).map(n => `<span class="meal-prev-item">${n}</span>`).join('')}
-            </div>
             <div class="meal-tags">
-              ${getDisplayTags(getAllRecipes().find(r => r.name === meal.name) || meal).map(t => `<span class="tag tag-${t}">${BUILTIN_TAGS.find(b=>b.id===t)?.label || t}</span>`).join('')}
+              ${recipeCuisines(liveMeal).map(c => `<span class="tag tag-cuisine">${c}</span>`).join('')}
+              ${recipeTypes(liveMeal).map(p => `<span class="tag tag-protein">${p}</span>`).join('')}
+              ${getDisplayTags(liveMeal).map(t => `<span class="tag tag-${t}">${BUILTIN_TAGS.find(b=>b.id===t)?.label || t}</span>`).join('')}
             </div>
           </div>
           ${meal.note ? `<div class="meal-note" onclick="editMealNote(${i})">📝 ${escapeHtml(meal.note)}</div>` : ''}
@@ -4206,7 +4212,7 @@ function normalizeIngredient(name) {
   // Remove standalone measurement-range artifacts like "- 120" or leftover dashes
   s = s.replace(/^[\s\-–—]+/, '');
   // Remove common units and measurement words (now also catches stray single letters)
-  s = s.replace(/\b(tsp|teaspoon|teaspoons|tbsp|tablespoon|tablespoons|cup|cups|oz|ounce|ounces|lb|lbs|pound|pounds|g|gram|grams|kg|ml|l|liter|litre|tin|tins|can|cans|clove|cloves|pinch|handful|bunch|sprig|sprigs|slice|slices|stick|sticks|piece|pieces|fillet|fillets)\b/g, '');
+  s = s.replace(/\b(tsp|teaspoon|teaspoons|tbsp|tablespoon|tablespoons|cup|cups|oz|ounce|ounces|lb|lbs|pound|pounds|g|gram|grams|kg|ml|l|liter|litre|tin|tins|can|cans|clove|cloves|cube|cubes|pinch|handful|bunch|sprig|sprigs|slice|slices|stick|sticks|piece|pieces|fillet|fillets)\b/g, '');
   // Remove prep / descriptor words
   s = s.replace(/\b(fresh|dried|ground|crushed|minced|chopped|finely|drained|very|well|extra|large|medium|small|skin-on|skin\s*on|bone-in|bone\s*in|boneless|skinless|to serve|to taste|of|the|and|or|x)\b/g, '');
   // "zest of 1 lemon" / "juice of 1 lemon" -> "lemon"
