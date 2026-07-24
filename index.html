@@ -3723,7 +3723,11 @@ function persistGroceryLists() {
 
 // Build the set of ingredients the current plan's recipes require
 function planIngredients(key) {
-  const plan = weekPlans[key] || [];
+  const fullPlan = weekPlans[key] || [];
+  // Hidden weekend days (toggle off) shouldn't contribute to groceries — their
+  // data stays intact in storage, but they're invisible everywhere, groceries included.
+  const visibleCount = familySettings.weekendMealsEnabled ? fullPlan.length : Math.min(fullPlan.length, 5);
+  const plan = fullPlan.slice(0, visibleCount);
   const out = []; // { name, item, amount, store, recipe }
   // Prep recipes
   getPrepRecipesForWeek(plan).forEach(pr => {
