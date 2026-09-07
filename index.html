@@ -5038,7 +5038,7 @@ function cleanIngredientCore(name) {
   // commonly sit directly before a comma in real ingredient lines ("bone-in,
   // skin-on chicken thighs") — removing them can leave a leading comma behind,
   // which the comma-split step below has to be careful not to choke on.
-  s = s.replace(/\b(fresh|freshly|dried|ground|crushed|minced|chopped|finely|coarsely|roughly|thinly|thickly|lightly|drained|squeezed|juiced|peeled|seeded|deveined|trimmed|halved|quartered|diced|sliced|softened|melted|cooled|room\s*temperature|few|plus|very|well|extra|large|medium|small|skin-on|skin\s*on|bone-in|bone\s*in|boneless|skinless|to serve|to taste|to season|for serving|for garnish|to garnish|for drizzling|garnish|garnishing|drizzling|serving|of|the|and|or|in|from|for|x)\b/g, '');
+  s = s.replace(/\b(fresh|freshly|dried|ground|crushed|minced|chopped|finely|coarsely|roughly|thinly|thickly|lightly|drained|squeezed|juiced|peeled|seeded|deveined|trimmed|halved|quartered|diced|sliced|shredded|grated|julienned|cubed|torn|crumbled|shaved|softened|melted|cooled|room\s*temperature|few|plus|very|well|extra|large|medium|small|skin-on|skin\s*on|bone-in|bone\s*in|boneless|skinless|to serve|to taste|to season|for serving|for garnish|to garnish|for drizzling|garnish|garnishing|drizzling|serving|of|the|and|or|in|from|for|x)\b/g, '');
   // "zest of 1 lemon" / "juice of 1 lemon" -> "lemon"
   s = s.replace(/\b(zest|juice)\b/g, '');
   // Keep the first NON-EMPTY comma-separated segment (prep notes after a comma
