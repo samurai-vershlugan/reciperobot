@@ -4404,7 +4404,12 @@ function syncGroceryList(key) {
         it.sources = Array.from(new Set((it.sources || []).concat(sources)));
       }
     } else {
-      // New item from a recipe
+      // New item from a recipe — if it already matches something confirmed in
+      // the pantry, trust that and start it pre-checked rather than making the
+      // person re-confirm the same thing on every new week's list. The "In
+      // Pantry" badge stays visible either way, so it's still a one-tap
+      // correction if they've actually run out since then.
+      const startsChecked = havePantryItem(req.item || req.name);
       list.items.push({
         key: nk,
         item: req.item,
@@ -4412,7 +4417,8 @@ function syncGroceryList(key) {
         amount: req.amount,
         store: req.store,
         qty: 1,
-        checked: false,
+        checked: startsChecked,
+        doneAt: startsChecked ? Date.now() : undefined,
         sources: sources,
         pinned: false,
         manual: false
@@ -4535,7 +4541,7 @@ function renderGroceryList() {
       src.textContent = 'from ' + it.sources.join(', ');
       nameSpan.appendChild(src);
     }
-    if (!it.checked && havePantryItem(it.item || it.name)) {
+    if (havePantryItem(it.item || it.name)) {
       const pantryBadge = document.createElement('button');
       pantryBadge.className = 'ing-pantry-badge';
       pantryBadge.textContent = '🥫 In Pantry';
@@ -4544,6 +4550,7 @@ function renderGroceryList() {
         e.stopPropagation();
         if (!confirm(`Remove "${it.name}" from your pantry? It'll stay here to buy.`)) return;
         await pantryRemoveItem(it.item || it.name);
+        if (it.checked) { it.checked = false; it.manualUnchecked = true; persistGroceryLists(); }
         renderGroceryList();
       };
       nameSpan.appendChild(pantryBadge);
