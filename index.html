@@ -7349,7 +7349,17 @@ async function refreshSharedDataOnFocus() {
 }
 
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible') refreshSharedDataOnFocus();
+  if (document.visibilityState === 'visible') {
+    refreshSharedDataOnFocus();
+  } else if (document.visibilityState === 'hidden') {
+    // iOS can suspend a backgrounded home-screen web app very quickly — much
+    // more aggressively than a regular Safari tab. If a save (e.g. a grocery
+    // item just checked off) was still in flight, it can get cut off before
+    // reaching Supabase, so the change silently never actually saved. Force
+    // an immediate save attempt right at the moment we're about to be hidden,
+    // since this event fires reliably before that suspension happens.
+    try { persistWeekPlans(); } catch(e) {}
+  }
 });
 window.addEventListener('focus', refreshSharedDataOnFocus);
 
