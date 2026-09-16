@@ -3432,6 +3432,19 @@
     </div>
     <div class="settings-note" style="margin-bottom:18px">Weekend days are never auto-filled by Generate — they're always planned manually.</div>
 
+    <div class="settings-row">
+      <div class="settings-row-text">
+        <b>Simplify</b>
+        <span>Fixed weekly theme per night — zero "what's for dinner" decisions</span>
+      </div>
+      <label class="toggle-switch">
+        <input type="checkbox" id="simplifyToggle" onchange="onSimplifyToggle(this.checked)">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+    <div class="settings-note" style="margin-bottom:8px">Generate will only pick within each night's theme. Sides are added to the grocery list automatically.</div>
+    <div id="simplifyThemeRows" style="margin-bottom:18px"></div>
+
     <div class="settings-row-text" style="margin-bottom:8px">
       <b>Restore Deleted Recipes</b>
       <span>Bring back a built-in recipe you removed from your library</span>
@@ -3858,7 +3871,63 @@ function pickFriday() {
   return pickRandom(pool);
 }
 
+// ─── SIMPLIFY (5-Night Theme Formula) ──────────────────────────────────────
+// A fixed weekday-to-theme mapping to eliminate "what's for dinner" decision
+// fatigue — each night has a locked category, and Generate only picks the
+// specific recipe within it. Reuses the existing lock/Generate mechanism
+// unchanged: a locked day is still protected, an unlocked day still gets
+// regenerated, just constrained to its theme's pool instead of the whole
+// library.
+const SIMPLIFY_THEME_PRESETS = {
+  pasta: {
+    label: 'Pasta Night',
+    pool: () => getAllRecipes().filter(r => (r.tags || []).includes('pasta')),
+    sides: [{ item: 'salad kit', store: 'tj' }, { item: 'garlic bread', store: 'tj' }]
+  },
+  taco: {
+    label: 'Taco / Mex Night',
+    pool: () => getAllRecipes().filter(r => (r.tags || []).includes('taco')),
+    sides: [{ item: 'tortilla chips', store: 'tj' }, { item: 'salsa', store: 'tj' }, { item: 'guacamole', store: 'tj' }]
+  },
+  chicken: {
+    label: 'Chicken Night',
+    pool: () => getAllRecipes().filter(r => (r.tags || []).includes('chicken') || RECIPES.chicken.some(x => x.name === r.name)),
+    sides: [{ item: 'rice or potatoes', store: 'tj' }, { item: 'frozen vegetables', store: 'tj' }]
+  },
+  steak: {
+    label: 'Steak Night',
+    pool: () => getAllRecipes().filter(r => (r.tags || []).includes('steak') || RECIPES.steak.some(x => x.name === r.name)),
+    sides: [{ item: 'frozen vegetables', store: 'tj' }]
+  },
+  pizza: {
+    label: 'Pizza Night',
+    pool: () => getAllRecipes().filter(r => /pizza/i.test(r.name)),
+    sides: [{ item: 'salad kit', store: 'tj' }]
+  },
+  none: { label: 'Free choice', pool: null, sides: [] }
+};
+const SIMPLIFY_DAY_LABELS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+const DEFAULT_SIMPLIFY_THEMES = { 0: 'pasta', 1: 'taco', 2: 'chicken', 3: 'steak', 4: 'pizza' };
+
+function pickSimplifyRecipe(dayIndex) {
+  const themeKey = (familySettings.simplifyThemes || DEFAULT_SIMPLIFY_THEMES)[dayIndex] || 'none';
+  const theme = SIMPLIFY_THEME_PRESETS[themeKey] || SIMPLIFY_THEME_PRESETS.none;
+  const pool = theme.pool ? theme.pool() : null;
+  const chosen = (pool && pool.length) ? pickRandom(pool) : pickRandom(getAllRecipes());
+  if (!chosen) return null;
+  const withSides = { ...chosen };
+  if (theme.sides && theme.sides.length) {
+    withSides.ingredients = [...(chosen.ingredients || []), ...theme.sides];
+  }
+  withSides.simplifyTheme = themeKey !== 'none' ? theme.label : null;
+  return withSides;
+}
+
 function generateWeekPlan() {
+  if (familySettings.simplifyEnabled) {
+    return [0, 1, 2, 3, 4].map(i => pickSimplifyRecipe(i));
+  }
+
   const tagPref = document.getElementById('generateTagFilter')?.value || '';
 
   function pickWithTag(pool) {
@@ -4105,7 +4174,10 @@ function renderWeek() {
           ${liveMeal.image ? `<div class="meal-photo meal-name-tappable" style="background-image:url('${liveMeal.image}')"><button class="mini-recipe-fav meal-fav-btn${isFavoriteRecipe(liveMeal.name) ? ' active' : ''}">♥</button></div>` : ''}
           <div class="meal-card-top">
             ${liveMeal.image ? '' : `<div class="meal-thumb meal-name-tappable">${mealEmoji(meal)}</div>`}
-            <div class="meal-name meal-name-tappable">${getMealDisplayName(meal)}</div>
+            <div style="flex:1;min-width:0">
+              ${meal.simplifyTheme ? `<div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.5px;text-transform:uppercase;color:var(--accent);margin-bottom:2px">${meal.simplifyTheme}</div>` : ''}
+              <div class="meal-name meal-name-tappable">${getMealDisplayName(meal)}</div>
+            </div>
           </div>
           <div class="meal-card-mid">
             <div class="meal-tags">
@@ -8431,7 +8503,7 @@ function closePantryModal() {
 
 // ─── FAMILY SETTINGS ──────────────────────────────────────────────────────────
 
-let familySettings = { weekendMealsEnabled: false, favoriteRecipeNames: [] };
+let familySettings = { weekendMealsEnabled: false, favoriteRecipeNames: [], simplifyEnabled: false, simplifyThemes: { ...DEFAULT_SIMPLIFY_THEMES } };
 
 async function loadFamilySettings() {
   if (!FAMILY_ID) return;
@@ -8445,7 +8517,7 @@ async function loadFamilySettings() {
     });
     const rows = await res.json();
     if (rows && rows.length && rows[0].settings_json) {
-      familySettings = { weekendMealsEnabled: false, favoriteRecipeNames: [], ...rows[0].settings_json };
+      familySettings = { weekendMealsEnabled: false, favoriteRecipeNames: [], simplifyEnabled: false, simplifyThemes: { ...DEFAULT_SIMPLIFY_THEMES }, ...rows[0].settings_json };
     }
   } catch(e) { console.warn('loadFamilySettings error:', e); }
 }
@@ -8468,8 +8540,31 @@ async function saveFamilySettings() {
 
 function openSettingsModal() {
   document.getElementById('weekendMealsToggle').checked = !!familySettings.weekendMealsEnabled;
+  document.getElementById('simplifyToggle').checked = !!familySettings.simplifyEnabled;
+  renderSimplifyThemeRows();
   renderRestoreRecipeList();
   document.getElementById('settingsModal').classList.add('open');
+}
+
+function renderSimplifyThemeRows() {
+  const el = document.getElementById('simplifyThemeRows');
+  if (!el) return;
+  const themes = familySettings.simplifyThemes || DEFAULT_SIMPLIFY_THEMES;
+  const optionsHtml = Object.entries(SIMPLIFY_THEME_PRESETS)
+    .map(([key, t]) => `<option value="${key}">${t.label}</option>`).join('');
+  el.innerHTML = SIMPLIFY_DAY_LABELS.map((dayLabel, i) => `
+    <div class="settings-row">
+      <div class="settings-row-text">${dayLabel}</div>
+      <select class="simplify-theme-select" data-day="${i}" style="font-family:'DM Mono',monospace;font-size:12px;padding:6px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text)">
+        ${optionsHtml}
+      </select>
+    </div>
+  `).join('');
+  el.querySelectorAll('.simplify-theme-select').forEach(sel => {
+    const day = sel.dataset.day;
+    sel.value = themes[day] || 'none';
+    sel.onchange = () => onSimplifyThemeChange(day, sel.value);
+  });
 }
 
 function renderRestoreRecipeList() {
@@ -8508,6 +8603,19 @@ async function onWeekendMealsToggle(checked) {
   await saveFamilySettings();
   showToast(checked ? 'Weekend meals enabled' : 'Weekend meals disabled');
   renderWeek();
+}
+
+async function onSimplifyToggle(checked) {
+  familySettings.simplifyEnabled = checked;
+  if (!familySettings.simplifyThemes) familySettings.simplifyThemes = { ...DEFAULT_SIMPLIFY_THEMES };
+  await saveFamilySettings();
+  showToast(checked ? 'Simplify enabled — Generate will now follow your weekly themes' : 'Simplify disabled');
+}
+
+async function onSimplifyThemeChange(dayIndex, themeKey) {
+  if (!familySettings.simplifyThemes) familySettings.simplifyThemes = { ...DEFAULT_SIMPLIFY_THEMES };
+  familySettings.simplifyThemes[dayIndex] = themeKey;
+  await saveFamilySettings();
 }
 
 function isFavoriteRecipe(name) {
