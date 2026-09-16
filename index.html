@@ -3904,6 +3904,46 @@ const SIMPLIFY_THEME_PRESETS = {
     pool: () => getAllRecipes().filter(r => /pizza/i.test(r.name)),
     sides: [{ item: 'salad kit', store: 'tj' }]
   },
+  soup_stew: {
+    label: 'Soup / Stew Night',
+    pool: () => getAllRecipes().filter(r => (r.tags || []).includes('soup') || /soup|stew|chili/i.test(r.name)),
+    sides: [{ item: 'crusty bread', store: 'tj' }, { item: 'salad kit', store: 'tj' }]
+  },
+  sheetpan_stirfry: {
+    label: 'Sheet Pan / Stir-Fry Night',
+    pool: () => getAllRecipes().filter(r => /sheet.?pan|stir.?fry/i.test(r.name)),
+    sides: [{ item: 'rice', store: 'tj' }]
+  },
+  slowcooker: {
+    label: 'Slow Cooker Night',
+    pool: () => getAllRecipes().filter(r => (r.tags || []).includes('slowcooker')),
+    sides: []
+  },
+  fish: {
+    label: 'Fish Night',
+    pool: () => getAllRecipes().filter(r => (r.tags || []).includes('fish') || RECIPES.fish.some(x => x.name === r.name)),
+    sides: [{ item: 'salad kit', store: 'tj' }]
+  },
+  burger: {
+    label: 'Burger Night',
+    pool: () => getAllRecipes().filter(r => RECIPES.burger.some(x => x.name === r.name)),
+    sides: [{ item: 'buns', store: 'tj' }, { item: 'chips', store: 'tj' }]
+  },
+  mediterranean: {
+    label: 'Mediterranean Night',
+    pool: () => getAllRecipes().filter(r => (r.tags || []).includes('mediterranean')),
+    sides: [{ item: 'pita bread', store: 'tj' }]
+  },
+  breakfast_dinner: {
+    label: 'Breakfast for Dinner',
+    pool: () => getAllRecipes().filter(r => (r.tags || []).includes('breakfast') || /pancake|omelet|breakfast|waffle/i.test(r.name)),
+    sides: []
+  },
+  leftovers: {
+    label: 'Leftovers Night',
+    special: 'leftovers',
+    sides: []
+  },
   none: { label: 'Free choice', pool: null, sides: [] }
 };
 const SIMPLIFY_DAY_LABELS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
@@ -3912,6 +3952,9 @@ const DEFAULT_SIMPLIFY_THEMES = { 0: 'pasta', 1: 'taco', 2: 'chicken', 3: 'steak
 function pickSimplifyRecipe(dayIndex) {
   const themeKey = (familySettings.simplifyThemes || DEFAULT_SIMPLIFY_THEMES)[dayIndex] || 'none';
   const theme = SIMPLIFY_THEME_PRESETS[themeKey] || SIMPLIFY_THEME_PRESETS.none;
+  if (theme.special === 'leftovers') {
+    return { name: 'Leftovers', tags: [], ingredients: [], simplifyTheme: theme.label };
+  }
   const pool = theme.pool ? theme.pool() : null;
   const chosen = (pool && pool.length) ? pickRandom(pool) : pickRandom(getAllRecipes());
   if (!chosen) return null;
