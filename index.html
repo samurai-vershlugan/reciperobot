@@ -3304,7 +3304,7 @@
     <button class="modal-close" onclick="closeDiscoverModal()">×</button>
     <h3 id="discoverModalTitle">✦ Discover New Recipes</h3>
     <p id="discoverModalSubtitle" style="color:var(--text-muted);font-size:13px;margin-bottom:16px;line-height:1.6">
-      Based on your meal history and preferences, we'll suggest recipes from trusted sources you haven't tried yet.
+      Pick your filters and we'll search the web for matching recipes. Choose one to import into your library.
     </p>
 
     <div id="discoverFilters" style="margin-bottom:16px">
@@ -9524,7 +9524,7 @@ function updateDiscoverModalHeader() {
     subEl.textContent = 'Whatever you pick here gets added straight to ' + DAYS[addLibraryDayIndex] + ' once saved.';
   } else {
     titleEl.textContent = '✦ Discover New Recipes';
-    subEl.textContent = "Based on your meal history and preferences, we'll suggest recipes from trusted sources you haven't tried yet.";
+    subEl.textContent = "Pick your filters and we'll search the web for matching recipes. Choose one to import into your library.";
   }
 }
 
@@ -9565,9 +9565,64 @@ function discoverSimilarFromEditor() {
   setTimeout(function(){ runDiscover(); }, 300);
 }
 
+// Discover = plain web search. Builds a query from the selected filters
+// (mood + protein + cuisine, or "similar to"), runs it through the existing
+// import-recipe search action, and lists the hits so you can pick one to import.
+const DISCOVER_MOOD_TERMS = {
+  comfort: 'comfort food',
+  healthy: 'healthy',
+  kid: 'kid friendly',
+  new: '',
+  quick: 'quick easy',
+  seasonal: '', // filled with the current month at query time
+  weekend: 'weekend'
+};
+
+function buildDiscoverQuery() {
+  if (discoverSimilarTo) {
+    const extra = [discoverProtein, discoverCuisine]
+      .filter(x => x && !discoverSimilarTo.toLowerCase().includes(x.toLowerCase()));
+    return ['recipes like', discoverSimilarTo].concat(extra).join(' ');
+  }
+  const parts = [];
+  let mood = DISCOVER_MOOD_TERMS[discoverMood] || '';
+  if (discoverMood === 'seasonal') {
+    mood = new Date().toLocaleString('en-US', { month: 'long' }) + ' seasonal';
+  }
+  if (mood) parts.push(mood);
+  if (discoverProtein) parts.push(discoverProtein);
+  if (discoverCuisine) parts.push(discoverCuisine);
+  parts.push('dinner recipe');
+  return parts.join(' ');
+}
+
+// Seed for the editor so imported recipes arrive pre-tagged with the filters used.
+function buildDiscoverSeed(title) {
+  const tags = [];
+  if (discoverMood === 'quick') tags.push('quick');
+  if (discoverMood === 'kid') tags.push('kid-friendly');
+  if (discoverProtein === 'vegetarian') tags.push('vegetarian');
+  const pf = discoverProtein && PROTEIN_FILTERS.find(p => p.label.toLowerCase() === discoverProtein);
+  return {
+    name: title || '',
+    tags: tags,
+    cuisine: discoverCuisine ? [discoverCuisine] : [],
+    type: pf ? [pf.label] : []
+  };
+}
+
+function cleanResultTitle(t) {
+  // Drop trailing " - Site Name" / " | Site Name" and a trailing "Recipe"
+  return String(t || '')
+    .replace(/\s+[|–—-]\s+[^|–—]+$/, '')
+    .replace(/\s+recipe$/i, '')
+    .trim();
+}
+
 async function runDiscover() {
   const btn = document.getElementById('discoverRunBtn');
   const resultsEl = document.getElementById('discoverResults');
+  const query = buildDiscoverQuery();
 
   await ensureFreshToken();
   btn.disabled = true;
@@ -9576,116 +9631,35 @@ async function runDiscover() {
       <div class="discover-loading-dots">
         <span>✦</span><span>✦</span><span>✦</span>
       </div>
-      <div style="margin-top:12px">Analyzing your tastes...</div>
+      <div style="margin-top:12px">Searching for “${escapeDiscoverHtml(query)}”…</div>
     </div>
   `;
 
-  const usedMeals = buildMealHistory();
-  const allMeals = buildLibraryNames();
-  const unusedMeals = allMeals.filter(n => !usedMeals.includes(n));
-  const familyPrefs = [
-    'Family with kids',
-    'Mix of quick weeknights and weekend cooking',
-    'Mediterranean, Mexican, and American comfort food',
-    'Shops at Costco, Trader Joes, and Whole Foods',
-    'Some gluten-free needs',
-    'Enjoys: Greek, shawarma, tacos, salmon, steak, pasta'
-  ];
-
-  const moodDescriptions = {
-    comfort: 'hearty, satisfying comfort food',
-    healthy: 'lighter, nutrient-dense meals',
-    kid: 'kid-friendly meals that are still interesting for adults',
-    new: 'exciting dishes with cuisines and flavor profiles new to this family',
-    quick: 'fast weeknight meals under 30 minutes',
-    seasonal: 'dishes that showcase produce and flavors in season right now',
-    weekend: 'more involved recipes worth the extra effort on weekends'
-  };
-
-  // Seasonal context based on location + month
-  const now = new Date();
-  const month = now.toLocaleString('en-US', { month: 'long' });
-  const seasonalNote = discoverMood === 'seasonal'
-    ? `\n\nIMPORTANT — Seasonal focus: It is currently ${month} in Northern California (Marin County / Bay Area). Recommend dishes featuring produce and ingredients at their peak right now in this region. Favor what would be fresh at local farmers markets this month.`
-    : '';
-
-  const prompt = `You are a culinary recommendation engine for a family meal planning app. 
-
-Family profile:
-${familyPrefs.map(p => `- ${p}`).join('\n')}
-
-Meals they already have in their library (do NOT recommend these):
-${allMeals.join(', ')}
-
-Meals they've actually cooked recently:
-${usedMeals.length ? usedMeals.join(', ') : 'Just getting started'}
-
-They're looking for: ${moodDescriptions[discoverMood] || 'a good variety'}.${seasonalNote}
-${discoverProtein ? `Protein focus: All 5 recipes MUST feature ${discoverProtein} as the main protein.` : ''}
-${discoverCuisine ? `Cuisine focus: All 5 recipes MUST be ${discoverCuisine} cuisine.` : ''}
-${discoverSimilarTo ? `Find recipes SIMILAR TO "${discoverSimilarTo}" — same style, key ingredients, and vibe, but different enough to be worth trying as alternatives.` : ''}
-
-Recommend exactly 5 specific recipes they would love but haven't tried. For each recipe use ONLY these trusted sources: NYT Cooking, Serious Eats, Smitten Kitchen, Half Baked Harvest, Budget Bytes, Bon Appétit, Food52.
-
-Respond ONLY with a JSON array, no markdown, no preamble:
-[
-  {
-    "name": "Recipe Name",
-    "source": "Source Name",
-    "description": "2 sentence description of why this family would love it",
-    "tags": ["quick", "kid-friendly"],
-    "category": "chicken|taco|pasta|fish|burger|steak|mediterranean|other",
-    "ingredients": ["ingredient 1", "ingredient 2"]
-  }
-]
-
-Tags must be from: quick, gluten-free, kid-friendly, meal-prep, vegetarian, dairy-free, spicy, date-night.`;
-
   try {
-    const response = await fetch(`${SUPABASE_URL}/functions/v1/discover-recipes`, {
+    const resp = await fetch(SUPABASE_URL + '/functions/v1/import-recipe', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${AUTH_TOKEN}`
-      },
-      body: JSON.stringify({ prompt })
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + AUTH_TOKEN },
+      body: JSON.stringify({ recipeName: query, action: 'search' })
     });
-
-    const rawText = await response.text();
-    console.log('Discover response status:', response.status);
-    console.log('Discover response body:', rawText);
-
-    if (!response.ok) throw new Error(`Edge function error ${response.status}: ${rawText}`);
-    if (!rawText || !rawText.trim()) {
-      throw new Error('The recipe service returned an empty response. The Edge Function may have crashed — check that ANTHROPIC_API_KEY is set and the model string is valid.');
-    }
-    const data = JSON.parse(rawText);
-    if (data.error) {
-      throw new Error('Service error: ' + (typeof data.error === 'string' ? data.error : JSON.stringify(data.error)));
-    }
-    const text = extractClaudeText(data);
-    console.log('Claude text:', text);
-    const clean = text.replace(/```json|```/g, '').trim();
-    let recipes;
-    try {
-      recipes = JSON.parse(clean);
-    } catch(parseErr) {
-      // Salvage: response may be truncated — recover complete objects from the array
-      recipes = salvageRecipeArray(clean);
-      if (!recipes.length) throw parseErr;
-    }
-    renderDiscoverResults(recipes);
-  } catch(e) {
+    const data = await resp.json();
+    console.log('Discover search:', query, data);
+    if (!resp.ok && !data.candidates) throw new Error(data.error || ('Search error ' + resp.status));
+    renderDiscoverResults(query, data.candidates || []);
+  } catch (e) {
     console.error('Discover error:', e);
     resultsEl.innerHTML = `
       <div style="color:#cc4444;font-family:'DM Mono',monospace;font-size:11px;padding:16px 0;line-height:1.8">
-        Error: ${e.message}<br>
+        Search failed: ${escapeDiscoverHtml(e.message)}<br>
         <span style="opacity:0.6">Check the browser console for details.</span>
       </div>
     `;
   } finally {
     btn.disabled = false;
   }
+}
+
+function escapeDiscoverHtml(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
 function salvageRecipeArray(text) {
@@ -9710,43 +9684,48 @@ function salvageRecipeArray(text) {
   return recipes;
 }
 
-function renderDiscoverResults(recipes) {
+function renderDiscoverResults(query, candidates) {
   const el = document.getElementById('discoverResults');
-  if (!recipes || !recipes.length) {
-    el.innerHTML = `<div style="color:var(--text-muted);font-size:13px;padding:16px 0">No recommendations found. Try a different mood.</div>`;
+  if (!candidates || !candidates.length) {
+    el.innerHTML = `<div style="color:var(--text-muted);font-size:13px;padding:16px 0">No results for “${escapeDiscoverHtml(query)}”. Try fewer filters.</div>`;
     return;
   }
 
-  el.innerHTML = `<div style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);margin-bottom:12px">5 recipes picked for you</div>`;
+  el.innerHTML = `<div style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);margin-bottom:12px">${candidates.length} result${candidates.length === 1 ? '' : 's'} for “${escapeDiscoverHtml(query)}”</div>`;
 
-  recipes.forEach(r => {
+  candidates.forEach(c => {
+    let hostname = c.site || '';
+    try { if (!hostname) hostname = new URL(c.url).hostname.replace(/^www\./, ''); } catch (_) {}
+    const title = cleanResultTitle(c.title || c.name) || hostname;
+    const snippet = c.snippet || c.description || '';
+
     const div = document.createElement('div');
     div.className = 'discover-result';
     div.innerHTML = `
-      <div class="discover-result-title">${r.name}</div>
-      <div class="discover-result-source">${r.source}</div>
-      <div class="discover-result-desc">${r.description}</div>
-      <div class="discover-result-tags">
-        ${(r.tags||[]).map(t => {
-          const bt = BUILTIN_TAGS.find(b => b.id === t);
-          return bt ? `<span class="tag tag-${t}">${bt.label}</span>` : '';
-        }).join('')}
-      </div>
+      <div class="discover-result-title">${escapeDiscoverHtml(title)}</div>
+      <div class="discover-result-source">${escapeDiscoverHtml(hostname)}</div>
+      ${snippet ? `<div class="discover-result-desc">${escapeDiscoverHtml(snippet)}</div>` : ''}
       <div class="discover-result-actions"></div>
-      <div class="recipe-candidates" style="display:none"></div>
+      <div class="recipe-candidate-status" style="display:none"></div>
     `;
     const actionsEl = div.querySelector('.discover-result-actions');
-    const candEl = div.querySelector('.recipe-candidates');
-    const findBtn = document.createElement('button');
-    findBtn.className = 'discover-action-btn primary';
-    findBtn.textContent = '🔍 Find recipe options';
-    findBtn.addEventListener('click', () => findRecipeOptions(r, findBtn, actionsEl, candEl));
-    actionsEl.appendChild(findBtn);
-    const manualBtn = document.createElement('button');
-    manualBtn.className = 'discover-action-btn';
-    manualBtn.textContent = 'Add manually';
-    manualBtn.addEventListener('click', () => { closeSourceDiscoveryModal(); openDiscoverEditModal(r); });
-    actionsEl.appendChild(manualBtn);
+    const statusEl = div.querySelector('.recipe-candidate-status');
+
+    const importBtn = document.createElement('button');
+    importBtn.className = 'discover-action-btn primary';
+    importBtn.textContent = 'Import →';
+    importBtn.addEventListener('click', () => importFromChosenUrl(c.url, buildDiscoverSeed(title), importBtn, statusEl));
+    actionsEl.appendChild(importBtn);
+
+    const viewLink = document.createElement('a');
+    viewLink.className = 'discover-action-btn';
+    viewLink.href = c.url;
+    viewLink.target = '_blank';
+    viewLink.rel = 'noopener';
+    viewLink.textContent = '↗ View';
+    viewLink.style.textDecoration = 'none';
+    actionsEl.appendChild(viewLink);
+
     el.appendChild(div);
   });
 }
