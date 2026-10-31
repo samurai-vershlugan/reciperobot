@@ -9636,26 +9636,36 @@ async function runDiscover() {
   `;
 
   try {
-    const resp = await fetch(SUPABASE_URL + '/functions/v1/import-recipe', {
+    const resp = await fetch(SUPABASE_URL + '/functions/v1/web-search', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + AUTH_TOKEN },
-      body: JSON.stringify({ recipeName: query, action: 'search' })
+      body: JSON.stringify({ query: query, num: 10 })
     });
-    const data = await resp.json();
-    console.log('Discover search:', query, data);
-    if (!resp.ok && !data.candidates) throw new Error(data.error || ('Search error ' + resp.status));
-    renderDiscoverResults(query, data.candidates || []);
+    let data = {};
+    try { data = await resp.json(); } catch (_) {}
+    console.log('Discover search:', query, resp.status, data);
+    if (!resp.ok) throw new Error(data.error || data.message || ('Search error ' + resp.status));
+    renderDiscoverResults(query, data.results || []);
   } catch (e) {
     console.error('Discover error:', e);
-    resultsEl.innerHTML = `
-      <div style="color:#cc4444;font-family:'DM Mono',monospace;font-size:11px;padding:16px 0;line-height:1.8">
-        Search failed: ${escapeDiscoverHtml(e.message)}<br>
-        <span style="opacity:0.6">Check the browser console for details.</span>
+    resultsEl.innerHTML = discoverGoogleLinkHtml(query) + `
+      <div style="color:var(--text-muted);font-size:12px;padding:12px 0;line-height:1.6">
+        Couldn't load results in the app, so use the Google link above.
+        <span style="opacity:0.6;font-family:'DM Mono',monospace;font-size:10px;display:block;margin-top:4px">${escapeDiscoverHtml(e.message)}</span>
       </div>
     `;
   } finally {
     btn.disabled = false;
   }
+}
+
+function discoverGoogleUrl(query) {
+  return 'https://www.google.com/search?q=' + encodeURIComponent(query);
+}
+
+function discoverGoogleLinkHtml(query) {
+  return `<a class="discover-action-btn" href="${discoverGoogleUrl(query)}" target="_blank" rel="noopener"
+    style="display:inline-block;text-decoration:none;margin-bottom:12px">↗ See all results on Google</a>`;
 }
 
 function escapeDiscoverHtml(s) {
@@ -9684,27 +9694,35 @@ function salvageRecipeArray(text) {
   return recipes;
 }
 
-function renderDiscoverResults(query, candidates) {
+function renderDiscoverResults(query, results) {
   const el = document.getElementById('discoverResults');
-  if (!candidates || !candidates.length) {
-    el.innerHTML = `<div style="color:var(--text-muted);font-size:13px;padding:16px 0">No results for “${escapeDiscoverHtml(query)}”. Try fewer filters.</div>`;
+  if (!results || !results.length) {
+    el.innerHTML = discoverGoogleLinkHtml(query) +
+      `<div style="color:var(--text-muted);font-size:13px;padding:8px 0">No results for “${escapeDiscoverHtml(query)}”.</div>`;
     return;
   }
 
-  el.innerHTML = `<div style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);margin-bottom:12px">${candidates.length} result${candidates.length === 1 ? '' : 's'} for “${escapeDiscoverHtml(query)}”</div>`;
+  el.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+      <div style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted)">Google results for “${escapeDiscoverHtml(query)}”</div>
+      <a href="${discoverGoogleUrl(query)}" target="_blank" rel="noopener" style="font-size:12px;color:var(--accent);text-decoration:none">↗ Open in Google</a>
+    </div>`;
 
-  candidates.forEach(c => {
+  results.forEach(c => {
     let hostname = c.site || '';
     try { if (!hostname) hostname = new URL(c.url).hostname.replace(/^www\./, ''); } catch (_) {}
-    const title = cleanResultTitle(c.title || c.name) || hostname;
-    const snippet = c.snippet || c.description || '';
+    const title = cleanResultTitle(c.title) || hostname;
 
     const div = document.createElement('div');
     div.className = 'discover-result';
     div.innerHTML = `
-      <div class="discover-result-title">${escapeDiscoverHtml(title)}</div>
-      <div class="discover-result-source">${escapeDiscoverHtml(hostname)}</div>
-      ${snippet ? `<div class="discover-result-desc">${escapeDiscoverHtml(snippet)}</div>` : ''}
+      <div style="display:flex;gap:12px;align-items:flex-start">
+        ${c.image ? `<img src="${escapeDiscoverHtml(c.image)}" alt="" loading="lazy" style="width:72px;height:72px;object-fit:cover;border-radius:8px;flex:0 0 auto" onerror="this.remove()">` : ''}
+        <div style="min-width:0;flex:1">
+          <div class="discover-result-title">${escapeDiscoverHtml(title)}</div>
+          <div class="discover-result-source">${escapeDiscoverHtml(hostname)}</div>
+          ${c.snippet ? `<div class="discover-result-desc">${escapeDiscoverHtml(c.snippet)}</div>` : ''}
+        </div>
+      </div>
       <div class="discover-result-actions"></div>
       <div class="recipe-candidate-status" style="display:none"></div>
     `;
