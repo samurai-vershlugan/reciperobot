@@ -9648,6 +9648,12 @@ async function runDiscover() {
     renderDiscoverResults(query, data.results || []);
   } catch (e) {
     console.error('Discover error:', e);
+    // fetch() itself rejecting (Safari: "Load failed", Chrome: "Failed to fetch")
+    // means no usable response — almost always the function isn't deployed yet,
+    // or it crashed before answering.
+    if (e instanceof TypeError) {
+      e = new Error('Could not reach the web-search function (' + e.message + '). It may not be deployed yet, or SERPER_API_KEY may be missing.');
+    }
     resultsEl.innerHTML = discoverGoogleLinkHtml(query) + `
       <div style="color:var(--text-muted);font-size:12px;padding:12px 0;line-height:1.6">
         Couldn't load results in the app, so use the Google link above.
